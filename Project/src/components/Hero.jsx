@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { HiAcademicCap, HiOfficeBuilding, HiBriefcase, HiChartBar, HiLightningBolt, HiStar } from 'react-icons/hi';
+import { Link } from 'react-router-dom';
 
 const floatingIcons = [
     { Icon: HiAcademicCap, x: '10%', y: '20%', delay: 0, size: 32, color: 'text-blue-300' },
@@ -96,21 +97,21 @@ export default function Hero() {
                     transition={{ duration: 0.8, delay: 0.8 }}
                     className="flex flex-col sm:flex-row items-center justify-center gap-4"
                 >
-                    <a
-                        href="#cta"
+                    <Link
+                        to="/register"
                         className="group px-8 py-4 rounded-2xl bg-gradient-to-r from-primary-500 to-accent-500 text-white font-semibold text-lg shadow-2xl shadow-primary-500/30 hover:shadow-primary-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-2"
                     >
                         Get Started
                         <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                         </svg>
-                    </a>
-                    <a
-                        href="#"
+                    </Link>
+                    <Link
+                        to="/login"
                         className="px-8 py-4 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 text-white font-semibold text-lg hover:bg-white/20 hover:scale-105 transition-all duration-300"
                     >
                         Login
-                    </a>
+                    </Link>
                 </motion.div>
 
                 {/* Stats row */}

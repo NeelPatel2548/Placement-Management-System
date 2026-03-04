@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { HiAcademicCap, HiOfficeBuilding } from 'react-icons/hi';
+import { Link } from 'react-router-dom';
 
 export default function CTA() {
     const [ref, inView] = useInView({ threshold: 0.3, triggerOnce: true });
@@ -44,8 +45,8 @@ export default function CTA() {
                     transition={{ duration: 0.6, delay: 0.2 }}
                     className="flex flex-col sm:flex-row items-center justify-center gap-4"
                 >
-                    <a
-                        href="#"
+                    <Link
+                        to="/register"
                         className="group w-full sm:w-auto px-8 py-4 rounded-2xl bg-white text-primary-700 font-semibold text-lg shadow-2xl shadow-black/10 hover:shadow-black/20 hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3"
                     >
                         <HiAcademicCap className="w-6 h-6" />
@@ -53,14 +54,14 @@ export default function CTA() {
                         <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                         </svg>
-                    </a>
-                    <a
-                        href="#"
+                    </Link>
+                    <Link
+                        to="/register"
                         className="group w-full sm:w-auto px-8 py-4 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 text-white font-semibold text-lg hover:bg-white/20 hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3"
                     >
                         <HiOfficeBuilding className="w-6 h-6" />
                         Register as Company
-                    </a>
+                    </Link>
                 </motion.div>
             </div>
         </section>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HiMenuAlt3, HiX } from 'react-icons/hi';
+import { Link } from 'react-router-dom';
 
 const navLinks = [
     { name: 'Home', href: '#home' },
@@ -26,8 +27,8 @@ export default function Navbar() {
             animate={{ y: 0 }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
             className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
-                    ? 'bg-white/80 backdrop-blur-xl shadow-lg shadow-primary-500/5'
-                    : 'bg-transparent'
+                ? 'bg-white/80 backdrop-blur-xl shadow-lg shadow-primary-500/5'
+                : 'bg-transparent'
                 }`}
         >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -63,21 +64,21 @@ export default function Navbar() {
 
                     {/* Desktop Buttons */}
                     <div className="hidden lg:flex items-center gap-3">
-                        <a
-                            href="#"
+                        <Link
+                            to="/login"
                             className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${scrolled
-                                    ? 'text-primary-600 hover:bg-primary-50'
-                                    : 'text-white hover:bg-white/10'
+                                ? 'text-primary-600 hover:bg-primary-50'
+                                : 'text-white hover:bg-white/10'
                                 }`}
                         >
                             Login
-                        </a>
-                        <a
-                            href="#"
+                        </Link>
+                        <Link
+                            to="/register"
                             className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-primary-500 to-accent-500 text-white shadow-lg shadow-primary-500/30 hover:shadow-primary-500/50 hover:scale-105 transition-all duration-200"
                         >
                             Register
-                        </a>
+                        </Link>
                     </div>
 
                     {/* Mobile Menu Button */}
@@ -112,12 +113,12 @@ export default function Navbar() {
                                 </a>
                             ))}
                             <div className="pt-3 flex flex-col gap-2 border-t border-gray-100 mt-2">
-                                <a href="#" className="px-4 py-3 rounded-xl text-center text-primary-600 font-semibold hover:bg-primary-50 transition-colors">
+                                <Link to="/login" onClick={() => setMobileOpen(false)} className="px-4 py-3 rounded-xl text-center text-primary-600 font-semibold hover:bg-primary-50 transition-colors">
                                     Login
-                                </a>
-                                <a href="#" className="px-4 py-3 rounded-xl text-center bg-gradient-to-r from-primary-500 to-accent-500 text-white font-semibold shadow-lg">
+                                </Link>
+                                <Link to="/register" onClick={() => setMobileOpen(false)} className="px-4 py-3 rounded-xl text-center bg-gradient-to-r from-primary-500 to-accent-500 text-white font-semibold shadow-lg">
                                     Register
-                                </a>
+                                </Link>
                             </div>
                         </div>
                     </motion.div>
