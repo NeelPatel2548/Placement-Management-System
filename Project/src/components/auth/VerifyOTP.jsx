@@ -9,7 +9,20 @@ export default function VerifyOTP() {
     const [otp, setOtp] = useState(Array(6).fill(''));
     const [timer, setTimer] = useState(120);
     const [canResend, setCanResend] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [resending, setResending] = useState(false);
+    const [error, setError] = useState('');
     const inputRefs = useRef([]);
+
+    const email = localStorage.getItem('pms_verify_email') || '';
+    const name = localStorage.getItem('pms_verify_name') || '';
+
+    // Redirect if no email in storage
+    useEffect(() => {
+        if (!email) {
+            navigate('/register');
+        }
+    }, [email, navigate]);
 
     // Countdown timer
     useEffect(() => {
@@ -49,21 +62,78 @@ export default function VerifyOTP() {
         inputRefs.current[focusIdx]?.focus();
     };
 
-    const handleResend = () => {
-        setTimer(120);
-        setCanResend(false);
-        setOtp(Array(6).fill(''));
-        inputRefs.current[0]?.focus();
+    const handleResend = async () => {
+        setResending(true);
+        setError('');
+
+        try {
+            const res = await fetch('http://localhost:5000/api/auth/resend-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            });
+
+            const data = await res.json();
+
+            if (!data.success) {
+                setError(data.message);
+                return;
+            }
+
+            setTimer(120);
+            setCanResend(false);
+            setOtp(Array(6).fill(''));
+            inputRefs.current[0]?.focus();
+        } catch (err) {
+            setError('Unable to resend OTP. Please try again.');
+        } finally {
+            setResending(false);
+        }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (otp.every((d) => d !== '')) {
+        if (!otp.every((d) => d !== '')) return;
+
+        setLoading(true);
+        setError('');
+
+        try {
+            const res = await fetch('http://localhost:5000/api/auth/verify-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, otp: otp.join('') }),
+            });
+
+            const data = await res.json();
+
+            if (!data.success) {
+                setError(data.message);
+                return;
+            }
+
+            // Store auth token and user info
+            localStorage.setItem('pms_token', data.token);
+            localStorage.setItem('pms_user', JSON.stringify(data.user));
+
+            // Clean up verification data
+            localStorage.removeItem('pms_verify_email');
+            localStorage.removeItem('pms_verify_name');
+
             navigate('/verify-success');
+        } catch (err) {
+            setError('Unable to verify OTP. Please try again.');
+        } finally {
+            setLoading(false);
         }
     };
 
     const delay = (d) => ({ initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { delay: d } });
+
+    // Mask email for display
+    const maskedEmail = email
+        ? email.replace(/(.{2})(.*)(@.*)/, (_, a, b, c) => a + '•'.repeat(b.length) + c)
+        : '';
 
     return (
         <AuthLayout>
@@ -79,11 +149,22 @@ export default function VerifyOTP() {
                     Verify Your Email
                 </motion.h1>
                 <motion.p {...delay(0.3)} className="text-white/40 text-sm leading-relaxed">
-                    We've sent a 6-digit verification code to your email.
+                    We've sent a 6-digit verification code to
                     <br />
-                    <span className="text-white/25">Please check your inbox and enter it below.</span>
+                    <span className="text-white/60 font-medium">{maskedEmail}</span>
                 </motion.p>
             </div>
+
+            {/* Error message */}
+            {error && (
+                <motion.div
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-4 p-3 rounded-xl bg-red-500/15 border border-red-400/30 text-red-300 text-sm text-center"
+                >
+                    {error}
+                </motion.div>
+            )}
 
             <form onSubmit={handleSubmit}>
                 {/* OTP Inputs */}
@@ -100,8 +181,8 @@ export default function VerifyOTP() {
                             onKeyDown={(e) => handleKeyDown(i, e)}
                             onPaste={i === 0 ? handlePaste : undefined}
                             className={`w-12 h-14 rounded-xl text-center text-xl font-bold transition-all duration-300 focus:outline-none ${digit
-                                    ? 'bg-primary-500/20 border-primary-400/50 text-white ring-2 ring-primary-400/20'
-                                    : 'bg-white/5 border-white/10 text-white/80'
+                                ? 'bg-primary-500/20 border-primary-400/50 text-white ring-2 ring-primary-400/20'
+                                : 'bg-white/5 border-white/10 text-white/80'
                                 } border focus:border-primary-400/60 focus:ring-2 focus:ring-primary-400/25`}
                         />
                     ))}
@@ -110,8 +191,13 @@ export default function VerifyOTP() {
                 {/* Timer */}
                 <motion.div {...delay(0.4)} className="text-center mb-6">
                     {canResend ? (
-                        <button type="button" onClick={handleResend} className="text-sm text-primary-300 hover:text-primary-200 font-semibold transition-colors">
-                            Resend Code
+                        <button
+                            type="button"
+                            onClick={handleResend}
+                            disabled={resending}
+                            className="text-sm text-primary-300 hover:text-primary-200 font-semibold transition-colors disabled:opacity-50"
+                        >
+                            {resending ? 'Resending...' : 'Resend Code'}
                         </button>
                     ) : (
                         <p className="text-sm text-white/30">
@@ -125,10 +211,20 @@ export default function VerifyOTP() {
                 <motion.button
                     {...delay(0.45)}
                     type="submit"
-                    disabled={!otp.every((d) => d !== '')}
+                    disabled={!otp.every((d) => d !== '') || loading}
                     className="w-full py-3.5 rounded-xl bg-gradient-to-r from-primary-500 to-accent-500 text-white font-semibold shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
-                    Verify Email
+                    {loading ? (
+                        <span className="flex items-center justify-center gap-2">
+                            <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                            Verifying...
+                        </span>
+                    ) : (
+                        'Verify Email'
+                    )}
                 </motion.button>
             </form>
 

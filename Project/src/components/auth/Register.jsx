@@ -17,12 +17,56 @@ export default function Register() {
     const [role, setRole] = useState('student');
     const [agreed, setAgreed] = useState(false);
     const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const update = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        navigate('/verify-otp');
+        setError('');
+
+        // Client-side validation
+        if (form.password !== form.confirm) {
+            setError('Passwords do not match');
+            return;
+        }
+
+        if (form.password.length < 6) {
+            setError('Password must be at least 6 characters');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            const res = await fetch('http://localhost:5000/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: form.name,
+                    email: form.email,
+                    password: form.password,
+                    role,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!data.success) {
+                setError(data.message);
+                return;
+            }
+
+            // Store email for OTP verification page
+            localStorage.setItem('pms_verify_email', form.email);
+            localStorage.setItem('pms_verify_name', form.name);
+            navigate('/verify-otp');
+        } catch (err) {
+            setError('Unable to connect to server. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const inputClass =
@@ -41,6 +85,17 @@ export default function Register() {
                 </motion.p>
             </div>
 
+            {/* Error message */}
+            {error && (
+                <motion.div
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-4 p-3 rounded-xl bg-red-500/15 border border-red-400/30 text-red-300 text-sm text-center"
+                >
+                    {error}
+                </motion.div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Role Selector */}
                 <motion.div {...delay(0.3)} className="grid grid-cols-2 gap-3 mb-1">
@@ -50,8 +105,8 @@ export default function Register() {
                             type="button"
                             onClick={() => setRole(r.id)}
                             className={`relative p-3.5 rounded-xl border text-left transition-all duration-300 group ${role === r.id
-                                    ? 'bg-primary-500/15 border-primary-400/40 shadow-lg shadow-primary-500/10'
-                                    : 'bg-white/5 border-white/10 hover:bg-white/8 hover:border-white/20'
+                                ? 'bg-primary-500/15 border-primary-400/40 shadow-lg shadow-primary-500/10'
+                                : 'bg-white/5 border-white/10 hover:bg-white/8 hover:border-white/20'
                                 }`}
                         >
                             <r.icon className={`w-6 h-6 mb-1.5 transition-colors ${role === r.id ? 'text-primary-400' : 'text-white/30 group-hover:text-white/50'}`} />
@@ -135,9 +190,20 @@ export default function Register() {
                 <motion.button
                     {...delay(0.6)}
                     type="submit"
-                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-primary-500 to-accent-500 text-white font-semibold shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+                    disabled={loading}
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-primary-500 to-accent-500 text-white font-semibold shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
-                    Create Account
+                    {loading ? (
+                        <span className="flex items-center justify-center gap-2">
+                            <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                            Creating Account...
+                        </span>
+                    ) : (
+                        'Create Account'
+                    )}
                 </motion.button>
             </form>
 

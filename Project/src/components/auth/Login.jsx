@@ -1,18 +1,54 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { HiMail, HiLockClosed, HiEye, HiEyeOff } from 'react-icons/hi';
 import { FaGoogle, FaGithub, FaLinkedinIn } from 'react-icons/fa';
 import AuthLayout from './AuthLayout';
 
 export default function Login() {
+    const navigate = useNavigate();
     const [showPass, setShowPass] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // Handle login
+        setError('');
+        setLoading(true);
+
+        try {
+            const res = await fetch('http://localhost:5000/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const data = await res.json();
+
+            if (!data.success) {
+                // If user needs verification, redirect to OTP page
+                if (data.needsVerification) {
+                    localStorage.setItem('pms_verify_email', data.email);
+                    navigate('/verify-otp');
+                    return;
+                }
+                setError(data.message);
+                return;
+            }
+
+            // Store auth token and user info
+            localStorage.setItem('pms_token', data.token);
+            localStorage.setItem('pms_user', JSON.stringify(data.user));
+
+            // Redirect to homepage
+            navigate('/');
+        } catch (err) {
+            setError('Unable to connect to server. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const inputClass =
@@ -38,6 +74,17 @@ export default function Login() {
                     Sign in to your placement portal
                 </motion.p>
             </div>
+
+            {/* Error message */}
+            {error && (
+                <motion.div
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-4 p-3 rounded-xl bg-red-500/15 border border-red-400/30 text-red-300 text-sm text-center"
+                >
+                    {error}
+                </motion.div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
                 {/* Email */}
@@ -86,9 +133,20 @@ export default function Login() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.45 }}
                     type="submit"
-                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-primary-500 to-accent-500 text-white font-semibold shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+                    disabled={loading}
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-primary-500 to-accent-500 text-white font-semibold shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
-                    Sign In
+                    {loading ? (
+                        <span className="flex items-center justify-center gap-2">
+                            <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                            Signing In...
+                        </span>
+                    ) : (
+                        'Sign In'
+                    )}
                 </motion.button>
             </form>
 
