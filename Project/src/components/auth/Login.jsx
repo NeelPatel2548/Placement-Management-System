@@ -28,9 +28,10 @@ export default function Login() {
             const data = await res.json();
 
             if (!data.success) {
-                // If user needs verification, redirect to OTP page
+                // If user needs email verification (unverified account)
                 if (data.needsVerification) {
                     localStorage.setItem('pms_verify_email', data.email);
+                    localStorage.setItem('pms_otp_purpose', 'register');
                     navigate('/verify-otp');
                     return;
                 }
@@ -38,11 +39,17 @@ export default function Login() {
                 return;
             }
 
-            // Store auth token and user info
+            // Two-step login: credentials validated, OTP sent to email
+            if (data.requiresOTP) {
+                localStorage.setItem('pms_verify_email', data.email);
+                localStorage.setItem('pms_otp_purpose', 'login');
+                navigate('/verify-otp');
+                return;
+            }
+
+            // Fallback: direct login (shouldn't happen with new flow)
             localStorage.setItem('pms_token', data.token);
             localStorage.setItem('pms_user', JSON.stringify(data.user));
-
-            // Redirect to homepage
             navigate('/');
         } catch (err) {
             setError('Unable to connect to server. Please try again.');

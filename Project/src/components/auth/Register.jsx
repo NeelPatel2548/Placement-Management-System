@@ -10,6 +10,9 @@ const roles = [
     { id: 'company', label: 'Company', icon: HiOfficeBuilding, desc: 'Hiring talent' },
 ];
 
+// Password validation regex
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+
 export default function Register() {
     const navigate = useNavigate();
     const [showPass, setShowPass] = useState(false);
@@ -22,6 +25,24 @@ export default function Register() {
 
     const update = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
+    // Password strength checker
+    const getPasswordStrength = (pwd) => {
+        if (!pwd) return { level: 0, label: '', color: '' };
+        let score = 0;
+        if (pwd.length >= 8) score++;
+        if (/[A-Z]/.test(pwd)) score++;
+        if (/[a-z]/.test(pwd)) score++;
+        if (/\d/.test(pwd)) score++;
+        if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)) score++;
+
+        if (score <= 2) return { level: score, label: 'Weak', color: 'bg-red-400' };
+        if (score <= 3) return { level: score, label: 'Fair', color: 'bg-yellow-400' };
+        if (score <= 4) return { level: score, label: 'Good', color: 'bg-blue-400' };
+        return { level: score, label: 'Strong', color: 'bg-emerald-400' };
+    };
+
+    const pwdStrength = getPasswordStrength(form.password);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
@@ -32,8 +53,8 @@ export default function Register() {
             return;
         }
 
-        if (form.password.length < 6) {
-            setError('Password must be at least 6 characters');
+        if (!PASSWORD_REGEX.test(form.password)) {
+            setError('Password must contain uppercase, lowercase, number and special character.');
             return;
         }
 
@@ -58,9 +79,10 @@ export default function Register() {
                 return;
             }
 
-            // Store email for OTP verification page
+            // Store info for OTP verification page
             localStorage.setItem('pms_verify_email', form.email);
             localStorage.setItem('pms_verify_name', form.name);
+            localStorage.setItem('pms_otp_purpose', 'register');
             navigate('/verify-otp');
         } catch (err) {
             setError('Unable to connect to server. Please try again.');
@@ -135,19 +157,42 @@ export default function Register() {
                 </motion.div>
 
                 {/* Password */}
-                <motion.div {...delay(0.45)} className="relative">
-                    <HiLockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 w-5 h-5" />
-                    <input
-                        type={showPass ? 'text' : 'password'}
-                        placeholder="Password"
-                        value={form.password}
-                        onChange={update('password')}
-                        className={`${inputClass} pr-11`}
-                        required
-                    />
-                    <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors">
-                        {showPass ? <HiEyeOff className="w-5 h-5" /> : <HiEye className="w-5 h-5" />}
-                    </button>
+                <motion.div {...delay(0.45)} className="space-y-2">
+                    <div className="relative">
+                        <HiLockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 w-5 h-5" />
+                        <input
+                            type={showPass ? 'text' : 'password'}
+                            placeholder="Password (min 8 chars, A-z, 0-9, !@#)"
+                            value={form.password}
+                            onChange={update('password')}
+                            className={`${inputClass} pr-11`}
+                            required
+                        />
+                        <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors">
+                            {showPass ? <HiEyeOff className="w-5 h-5" /> : <HiEye className="w-5 h-5" />}
+                        </button>
+                    </div>
+                    {/* Password strength indicator */}
+                    {form.password && (
+                        <div className="flex items-center gap-2 px-1">
+                            <div className="flex-1 flex gap-1">
+                                {[1, 2, 3, 4, 5].map((i) => (
+                                    <div
+                                        key={i}
+                                        className={`h-1 flex-1 rounded-full transition-all duration-300 ${i <= pwdStrength.level ? pwdStrength.color : 'bg-white/10'
+                                            }`}
+                                    />
+                                ))}
+                            </div>
+                            <span className={`text-[11px] font-medium ${pwdStrength.level <= 2 ? 'text-red-400' :
+                                    pwdStrength.level <= 3 ? 'text-yellow-400' :
+                                        pwdStrength.level <= 4 ? 'text-blue-400' :
+                                            'text-emerald-400'
+                                }`}>
+                                {pwdStrength.label}
+                            </span>
+                        </div>
+                    )}
                 </motion.div>
 
                 {/* Confirm Password */}

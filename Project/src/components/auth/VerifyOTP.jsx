@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { HiMail } from 'react-icons/hi';
+import { HiMail, HiShieldCheck } from 'react-icons/hi';
 import AuthLayout from './AuthLayout';
 
 export default function VerifyOTP() {
@@ -16,13 +16,21 @@ export default function VerifyOTP() {
 
     const email = localStorage.getItem('pms_verify_email') || '';
     const name = localStorage.getItem('pms_verify_name') || '';
+    const purpose = localStorage.getItem('pms_otp_purpose') || 'register';
+
+    const isLoginOTP = purpose === 'login';
 
     // Redirect if no email in storage
     useEffect(() => {
         if (!email) {
-            navigate('/register');
+            navigate(isLoginOTP ? '/login' : '/register');
         }
-    }, [email, navigate]);
+    }, [email, navigate, isLoginOTP]);
+
+    // Set appropriate timer based on purpose
+    useEffect(() => {
+        setTimer(isLoginOTP ? 300 : 600); // 5min for login, 10min for register
+    }, [isLoginOTP]);
 
     // Countdown timer
     useEffect(() => {
@@ -67,7 +75,13 @@ export default function VerifyOTP() {
         setError('');
 
         try {
-            const res = await fetch('http://localhost:5000/api/auth/resend-otp', {
+            // For login OTP, re-call the login endpoint (needs password resubmit)
+            // For register OTP, call resend-otp
+            const endpoint = isLoginOTP
+                ? 'http://localhost:5000/api/auth/resend-otp'
+                : 'http://localhost:5000/api/auth/resend-otp';
+
+            const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email }),
@@ -80,7 +94,7 @@ export default function VerifyOTP() {
                 return;
             }
 
-            setTimer(120);
+            setTimer(isLoginOTP ? 300 : 600);
             setCanResend(false);
             setOtp(Array(6).fill(''));
             inputRefs.current[0]?.focus();
@@ -99,7 +113,12 @@ export default function VerifyOTP() {
         setError('');
 
         try {
-            const res = await fetch('http://localhost:5000/api/auth/verify-otp', {
+            // Use different endpoints based on purpose
+            const endpoint = isLoginOTP
+                ? 'http://localhost:5000/api/auth/login/verify'
+                : 'http://localhost:5000/api/auth/verify-otp';
+
+            const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, otp: otp.join('') }),
@@ -119,8 +138,15 @@ export default function VerifyOTP() {
             // Clean up verification data
             localStorage.removeItem('pms_verify_email');
             localStorage.removeItem('pms_verify_name');
+            localStorage.removeItem('pms_otp_purpose');
 
-            navigate('/verify-success');
+            if (isLoginOTP) {
+                // Login verified → go to homepage
+                navigate('/');
+            } else {
+                // Registration verified → go to success page
+                navigate('/verify-success');
+            }
         } catch (err) {
             setError('Unable to verify OTP. Please try again.');
         } finally {
@@ -138,18 +164,27 @@ export default function VerifyOTP() {
     return (
         <AuthLayout>
             <div className="text-center mb-8">
-                {/* Email icon */}
+                {/* Icon */}
                 <motion.div {...delay(0.1)} className="flex justify-center mb-5">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center shadow-xl shadow-primary-500/30">
-                        <HiMail className="w-8 h-8 text-white" />
+                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl ${isLoginOTP
+                            ? 'bg-gradient-to-br from-emerald-500 to-teal-500 shadow-emerald-500/30'
+                            : 'bg-gradient-to-br from-primary-500 to-accent-500 shadow-primary-500/30'
+                        }`}>
+                        {isLoginOTP
+                            ? <HiShieldCheck className="w-8 h-8 text-white" />
+                            : <HiMail className="w-8 h-8 text-white" />
+                        }
                     </div>
                 </motion.div>
 
                 <motion.h1 {...delay(0.2)} className="text-2xl font-bold text-white mb-2">
-                    Verify Your Email
+                    {isLoginOTP ? 'Login Verification' : 'Verify Your Email'}
                 </motion.h1>
                 <motion.p {...delay(0.3)} className="text-white/40 text-sm leading-relaxed">
-                    We've sent a 6-digit verification code to
+                    {isLoginOTP
+                        ? 'Enter the 6-digit code sent to'
+                        : "We've sent a 6-digit verification code to"
+                    }
                     <br />
                     <span className="text-white/60 font-medium">{maskedEmail}</span>
                 </motion.p>
@@ -181,9 +216,14 @@ export default function VerifyOTP() {
                             onKeyDown={(e) => handleKeyDown(i, e)}
                             onPaste={i === 0 ? handlePaste : undefined}
                             className={`w-12 h-14 rounded-xl text-center text-xl font-bold transition-all duration-300 focus:outline-none ${digit
-                                ? 'bg-primary-500/20 border-primary-400/50 text-white ring-2 ring-primary-400/20'
+                                ? isLoginOTP
+                                    ? 'bg-emerald-500/20 border-emerald-400/50 text-white ring-2 ring-emerald-400/20'
+                                    : 'bg-primary-500/20 border-primary-400/50 text-white ring-2 ring-primary-400/20'
                                 : 'bg-white/5 border-white/10 text-white/80'
-                                } border focus:border-primary-400/60 focus:ring-2 focus:ring-primary-400/25`}
+                                } border ${isLoginOTP
+                                    ? 'focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/25'
+                                    : 'focus:border-primary-400/60 focus:ring-2 focus:ring-primary-400/25'
+                                }`}
                         />
                     ))}
                 </motion.div>
@@ -202,7 +242,9 @@ export default function VerifyOTP() {
                     ) : (
                         <p className="text-sm text-white/30">
                             Resend code in{' '}
-                            <span className="text-primary-300 font-mono font-semibold">{formatTime(timer)}</span>
+                            <span className={`font-mono font-semibold ${isLoginOTP ? 'text-emerald-300' : 'text-primary-300'}`}>
+                                {formatTime(timer)}
+                            </span>
                         </p>
                     )}
                 </motion.div>
@@ -212,7 +254,10 @@ export default function VerifyOTP() {
                     {...delay(0.45)}
                     type="submit"
                     disabled={!otp.every((d) => d !== '') || loading}
-                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-primary-500 to-accent-500 text-white font-semibold shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    className={`w-full py-3.5 rounded-xl text-white font-semibold shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 ${isLoginOTP
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-emerald-500/25 hover:shadow-emerald-500/40'
+                            : 'bg-gradient-to-r from-primary-500 to-accent-500 shadow-primary-500/25 hover:shadow-primary-500/40'
+                        }`}
                 >
                     {loading ? (
                         <span className="flex items-center justify-center gap-2">
@@ -223,7 +268,7 @@ export default function VerifyOTP() {
                             Verifying...
                         </span>
                     ) : (
-                        'Verify Email'
+                        isLoginOTP ? 'Verify & Login' : 'Verify Email'
                     )}
                 </motion.button>
             </form>
@@ -233,7 +278,9 @@ export default function VerifyOTP() {
                 {[0, 1, 2].map((step) => (
                     <div
                         key={step}
-                        className={`h-1.5 rounded-full transition-all duration-300 ${step <= 1 ? 'w-6 bg-primary-400' : 'w-1.5 bg-white/15'
+                        className={`h-1.5 rounded-full transition-all duration-300 ${step <= 1
+                            ? `w-6 ${isLoginOTP ? 'bg-emerald-400' : 'bg-primary-400'}`
+                            : 'w-1.5 bg-white/15'
                             }`}
                     />
                 ))}

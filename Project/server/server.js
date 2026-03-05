@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './config/db.js';
-import { initEmailService } from './config/emailService.js';
+import { initEmailService } from './services/emailService.js';
 import authRoutes from './routes/authRoutes.js';
 
 // Load env variables first
