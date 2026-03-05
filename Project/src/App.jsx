@@ -12,6 +12,7 @@ import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import VerifyOTP from './components/auth/VerifyOTP';
 import VerifySuccess from './components/auth/VerifySuccess';
+import ForgotPassword from './components/auth/ForgotPassword';
 
 function HomePage() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/verify-otp" element={<VerifyOTP />} />
         <Route path="/verify-success" element={<VerifySuccess />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
       </Routes>
     </BrowserRouter>
   );

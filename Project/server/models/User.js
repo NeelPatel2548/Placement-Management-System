@@ -29,6 +29,7 @@ const userSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        // Auth OTP fields (registration + login)
         otp: {
             type: String,
         },
@@ -38,6 +39,17 @@ const userSchema = new mongoose.Schema(
         otpAttempts: {
             type: Number,
             default: 0,
+        },
+        // Password reset OTP fields
+        resetOtp: {
+            type: String,
+        },
+        resetOtpExpiry: {
+            type: Date,
+        },
+        otpVerifiedForReset: {
+            type: Boolean,
+            default: false,
         },
     },
     {

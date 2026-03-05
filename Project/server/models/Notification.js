@@ -19,7 +19,7 @@ const notificationSchema = new mongoose.Schema(
         },
         type: {
             type: String,
-            enum: ['job', 'interview', 'result'],
+            enum: ['job', 'interview', 'result', 'security'],
             required: [true, 'Notification type is required'],
         },
         isRead: {
