@@ -4,6 +4,9 @@ import dotenv from 'dotenv';
 import connectDB from './config/db.js';
 import { initEmailService } from './services/emailService.js';
 import authRoutes from './routes/authRoutes.js';
+import studentRoutes from './routes/studentRoutes.js';
+import companyRoutes from './routes/companyRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 // Load env variables first
 dotenv.config();
@@ -20,6 +23,9 @@ app.use(express.json());
 
 // ─── Routes ───
 app.use('/api/auth', authRoutes);
+app.use('/api/student', studentRoutes);
+app.use('/api/company', companyRoutes);
+app.use('/api/admin', adminRoutes);
 
 // ─── Health check ───
 app.get('/api/health', (req, res) => {

@@ -10,25 +10,69 @@ const studentSchema = new mongoose.Schema(
         },
         enrollmentNo: {
             type: String,
-            required: [true, 'Enrollment number is required'],
             unique: true,
+            sparse: true,
             trim: true,
         },
         branch: {
             type: String,
-            required: [true, 'Branch is required'],
             trim: true,
+        },
+        // Personal Information
+        phone: {
+            type: String,
+            trim: true,
+        },
+        dob: {
+            type: Date,
+        },
+        gender: {
+            type: String,
+            enum: ['male', 'female', 'other'],
+        },
+        address: {
+            type: String,
+            trim: true,
+        },
+        // Academic Details
+        tenthPercentage: {
+            type: Number,
+            min: 0,
+            max: 100,
+        },
+        twelfthPercentage: {
+            type: Number,
+            min: 0,
+            max: 100,
         },
         cgpa: {
             type: Number,
             min: [0, 'CGPA cannot be negative'],
             max: [10, 'CGPA cannot exceed 10'],
         },
+        currentSemester: {
+            type: Number,
+            min: 1,
+            max: 8,
+        },
+        backlogs: {
+            type: Boolean,
+            default: false,
+        },
+        // Professional Details
         skills: {
             type: [String],
             default: [],
         },
-        phone: {
+        projects: {
+            type: [String],
+            default: [],
+        },
+        certifications: {
+            type: [String],
+            default: [],
+        },
+        internshipExperience: {
             type: String,
             trim: true,
         },
@@ -40,10 +84,12 @@ const studentSchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
+        // Resume
         resumeId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Resume',
         },
+        // Applications
         applications: [
             {
                 type: mongoose.Schema.Types.ObjectId,
@@ -61,9 +107,7 @@ const studentSchema = new mongoose.Schema(
     }
 );
 
-// Index on userId and enrollmentNo for fast lookups
 studentSchema.index({ userId: 1 });
-studentSchema.index({ enrollmentNo: 1 });
 
 const Student = mongoose.model('Student', studentSchema);
 

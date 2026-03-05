@@ -13,6 +13,7 @@ export default function VerifyOTP() {
     const [resending, setResending] = useState(false);
     const [error, setError] = useState('');
     const inputRefs = useRef([]);
+    const verifiedRef = useRef(false);
 
     const email = localStorage.getItem('pms_verify_email') || '';
     const name = localStorage.getItem('pms_verify_name') || '';
@@ -20,9 +21,9 @@ export default function VerifyOTP() {
 
     const isLoginOTP = purpose === 'login';
 
-    // Redirect if no email in storage
+    // Redirect if no email in storage (but skip if OTP was just verified)
     useEffect(() => {
-        if (!email) {
+        if (!email && !verifiedRef.current) {
             navigate(isLoginOTP ? '/login' : '/register');
         }
     }, [email, navigate, isLoginOTP]);
@@ -131,6 +132,9 @@ export default function VerifyOTP() {
                 return;
             }
 
+            // Mark as verified before any state changes (prevents useEffect race)
+            verifiedRef.current = true;
+
             // Store auth token and user info
             localStorage.setItem('pms_token', data.token);
             localStorage.setItem('pms_user', JSON.stringify(data.user));
@@ -141,8 +145,10 @@ export default function VerifyOTP() {
             localStorage.removeItem('pms_otp_purpose');
 
             if (isLoginOTP) {
-                // Login verified → go to homepage
-                navigate('/');
+                // Login verified → redirect based on role
+                const role = data.user?.role || 'student';
+                const roleRoutes = { student: '/student', company: '/company', admin: '/admin' };
+                navigate(roleRoutes[role] || '/student');
             } else {
                 // Registration verified → go to success page
                 navigate('/verify-success');
@@ -167,8 +173,8 @@ export default function VerifyOTP() {
                 {/* Icon */}
                 <motion.div {...delay(0.1)} className="flex justify-center mb-5">
                     <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl ${isLoginOTP
-                            ? 'bg-gradient-to-br from-emerald-500 to-teal-500 shadow-emerald-500/30'
-                            : 'bg-gradient-to-br from-primary-500 to-accent-500 shadow-primary-500/30'
+                        ? 'bg-gradient-to-br from-emerald-500 to-teal-500 shadow-emerald-500/30'
+                        : 'bg-gradient-to-br from-primary-500 to-accent-500 shadow-primary-500/30'
                         }`}>
                         {isLoginOTP
                             ? <HiShieldCheck className="w-8 h-8 text-white" />
@@ -255,8 +261,8 @@ export default function VerifyOTP() {
                     type="submit"
                     disabled={!otp.every((d) => d !== '') || loading}
                     className={`w-full py-3.5 rounded-xl text-white font-semibold shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 ${isLoginOTP
-                            ? 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-emerald-500/25 hover:shadow-emerald-500/40'
-                            : 'bg-gradient-to-r from-primary-500 to-accent-500 shadow-primary-500/25 hover:shadow-primary-500/40'
+                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-emerald-500/25 hover:shadow-emerald-500/40'
+                        : 'bg-gradient-to-r from-primary-500 to-accent-500 shadow-primary-500/25 hover:shadow-primary-500/40'
                         }`}
                 >
                     {loading ? (
