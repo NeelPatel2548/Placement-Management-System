@@ -30,10 +30,22 @@ import SettingsPage from './components/dashboard/SettingsPage';
 import AnalyticsPage from './components/dashboard/AnalyticsPage';
 
 // Company Dashboard
-import { CompanyLayout, CompanyDashboard, CompanyPostJob, CompanyApplicants } from './components/company/CompanyDashboard';
+import { CompanyLayout } from './components/company/CompanyLayout';
+import CompanyHome from './components/company/CompanyHome';
+import CompanyPostJob from './components/company/CompanyPostJob';
+import CompanyApplicants from './components/company/CompanyApplicants';
+import CompanyInterviews from './components/company/CompanyInterviews';
+import CompanyProfile from './components/company/CompanyProfile';
 
 // Admin Dashboard
-import { AdminLayout, AdminDashboard, AdminManageUsers, AdminReports } from './components/admin/AdminDashboard';
+import { AdminLayout } from './components/admin/AdminLayout';
+import AdminHome from './components/admin/AdminHome';
+import AdminCompanies from './components/admin/AdminCompanies';
+import AdminStudents from './components/admin/AdminStudents';
+import AdminJobs from './components/admin/AdminJobs';
+import AdminAnalytics from './components/admin/AdminAnalytics';
+import AdminAnnouncements from './components/admin/AdminAnnouncements';
+import AdminReports from './components/admin/AdminReports';
 
 function HomePage() {
   return (
@@ -64,7 +76,7 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/profile-setup" element={<ProtectedRoute role="student"><ProfileSetup /></ProtectedRoute>} />
 
-        {/* Student Routes — role="student" */}
+        {/* Student Routes */}
         <Route path="/student" element={<ProtectedRoute role="student"><DashboardLayout /></ProtectedRoute>}>
           <Route index element={<DashboardHome />} />
           <Route path="profile" element={<ProfilePage />} />
@@ -78,17 +90,23 @@ export default function App() {
           <Route path="analytics" element={<AnalyticsPage />} />
         </Route>
 
-        {/* Company Routes — role="company" */}
+        {/* Company Routes */}
         <Route path="/company" element={<ProtectedRoute role="company"><CompanyLayout /></ProtectedRoute>}>
-          <Route index element={<CompanyDashboard />} />
+          <Route index element={<CompanyHome />} />
           <Route path="post-job" element={<CompanyPostJob />} />
           <Route path="applicants" element={<CompanyApplicants />} />
+          <Route path="interviews" element={<CompanyInterviews />} />
+          <Route path="profile" element={<CompanyProfile />} />
         </Route>
 
-        {/* Admin Routes — role="admin" */}
+        {/* Admin Routes */}
         <Route path="/admin" element={<ProtectedRoute role="admin"><AdminLayout /></ProtectedRoute>}>
-          <Route index element={<AdminDashboard />} />
-          <Route path="manage-users" element={<AdminManageUsers />} />
+          <Route index element={<AdminHome />} />
+          <Route path="companies" element={<AdminCompanies />} />
+          <Route path="students" element={<AdminStudents />} />
+          <Route path="jobs" element={<AdminJobs />} />
+          <Route path="analytics" element={<AdminAnalytics />} />
+          <Route path="announcements" element={<AdminAnnouncements />} />
           <Route path="reports" element={<AdminReports />} />
         </Route>
       </Routes>
