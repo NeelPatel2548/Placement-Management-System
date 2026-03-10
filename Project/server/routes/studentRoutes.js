@@ -1,47 +1,51 @@
 import express from 'express';
 import { protect, authorize } from '../middleware/authMiddleware.js';
+import { uploadResume } from '../middleware/upload.js';
+import {
+    setupProfile, getProfile, updateProfile,
+    getDashboard, getEligibleJobs, applyToJob,
+    getApplications, getInterviews,
+    uploadResumeHandler,
+    getNotifications, markNotificationRead,
+    getAnalytics, sendMessage, getMessages,
+} from '../controllers/studentController.js';
 
 const router = express.Router();
 
-// ─── All student routes require JWT + student role ───
+// All student routes require JWT + student role
 router.use(protect);
 router.use(authorize('student'));
 
-// GET /api/student/dashboard — student dashboard data
-router.get('/dashboard', async (req, res) => {
-    try {
-        res.json({
-            success: true,
-            message: 'Student dashboard data',
-            user: {
-                id: req.user._id,
-                name: req.user.name,
-                email: req.user.email,
-                role: req.user.role,
-                profileCompleted: req.user.profileCompleted,
-            },
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error' });
-    }
-});
+// Dashboard
+router.get('/dashboard', getDashboard);
 
-// GET /api/student/profile
-router.get('/profile', async (req, res) => {
-    try {
-        res.json({
-            success: true,
-            user: {
-                id: req.user._id,
-                name: req.user.name,
-                email: req.user.email,
-                role: req.user.role,
-                profileCompleted: req.user.profileCompleted,
-            },
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error' });
-    }
-});
+// Profile
+router.post('/profile/setup', setupProfile);
+router.get('/profile', getProfile);
+router.put('/profile', updateProfile);
+
+// Jobs
+router.get('/jobs', getEligibleJobs);
+router.post('/jobs/:jobId/apply', applyToJob);
+
+// Applications
+router.get('/applications', getApplications);
+
+// Interviews
+router.get('/interviews', getInterviews);
+
+// Resume
+router.post('/resume', uploadResume.single('resume'), uploadResumeHandler);
+
+// Notifications
+router.get('/notifications', getNotifications);
+router.put('/notifications/:id/read', markNotificationRead);
+
+// Analytics
+router.get('/analytics', getAnalytics);
+
+// Messages
+router.post('/messages', sendMessage);
+router.get('/messages', getMessages);
 
 export default router;
