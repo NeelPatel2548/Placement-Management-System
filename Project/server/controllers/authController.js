@@ -24,10 +24,10 @@ export const register = async (req, res) => {
         }
 
         // Validate role
-        if (!['student', 'company'].includes(role)) {
+        if (!['student', 'company', 'admin'].includes(role)) {
             return res.status(400).json({
                 success: false,
-                message: 'Role must be either student or company',
+                message: 'Role must be student, company, or admin',
             });
         }
 

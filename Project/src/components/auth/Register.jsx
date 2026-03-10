@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { HiUser, HiMail, HiLockClosed, HiEye, HiEyeOff } from 'react-icons/hi';
-import { HiAcademicCap, HiOfficeBuilding } from 'react-icons/hi';
+import { HiAcademicCap, HiOfficeBuilding, HiShieldCheck } from 'react-icons/hi';
 import AuthLayout from './AuthLayout';
 
 const roles = [
     { id: 'student', label: 'Student', icon: HiAcademicCap, desc: 'Looking for jobs' },
     { id: 'company', label: 'Company', icon: HiOfficeBuilding, desc: 'Hiring talent' },
+    { id: 'admin', label: 'Admin', icon: HiShieldCheck, desc: 'Placement cell' },
 ];
 
 // Password validation regex
@@ -120,7 +121,7 @@ export default function Register() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Role Selector */}
-                <motion.div {...delay(0.3)} className="grid grid-cols-2 gap-3 mb-1">
+                <motion.div {...delay(0.3)} className="grid grid-cols-3 gap-3 mb-1">
                     {roles.map((r) => (
                         <button
                             key={r.id}
@@ -185,9 +186,9 @@ export default function Register() {
                                 ))}
                             </div>
                             <span className={`text-[11px] font-medium ${pwdStrength.level <= 2 ? 'text-red-400' :
-                                    pwdStrength.level <= 3 ? 'text-yellow-400' :
-                                        pwdStrength.level <= 4 ? 'text-blue-400' :
-                                            'text-emerald-400'
+                                pwdStrength.level <= 3 ? 'text-yellow-400' :
+                                    pwdStrength.level <= 4 ? 'text-blue-400' :
+                                        'text-emerald-400'
                                 }`}>
                                 {pwdStrength.label}
                             </span>
