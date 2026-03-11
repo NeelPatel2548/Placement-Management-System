@@ -2,19 +2,67 @@ import mongoose from 'mongoose';
 
 const interviewSchema = new mongoose.Schema(
     {
+        interviewId: {
+            type: String,
+            unique: true,
+            sparse: true,
+            trim: true,
+        },
         applicationId: {
+            type: String,
+            trim: true,
+        },
+        // Keep ObjectId ref for existing flow
+        applicationRef: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Application',
-            required: [true, 'Application reference is required'],
         },
+        studentId: {
+            type: String,
+            trim: true,
+        },
+        studentName: {
+            type: String,
+            trim: true,
+        },
+        companyId: {
+            type: String,
+            trim: true,
+        },
+        companyName: {
+            type: String,
+            trim: true,
+        },
+        jobId: {
+            type: String,
+            trim: true,
+        },
+        jobTitle: {
+            type: String,
+            trim: true,
+        },
+        scheduledDate: {
+            type: Date,
+        },
+        scheduledTime: {
+            type: String,
+            trim: true,
+        },
+        mode: {
+            type: String,
+            enum: ['online', 'offline'],
+        },
+        // Legacy fields
         interviewDate: {
             type: Date,
-            required: [true, 'Interview date is required'],
         },
         interviewType: {
             type: String,
             enum: ['online', 'offline'],
-            required: [true, 'Interview type is required'],
+        },
+        venue: {
+            type: String,
+            trim: true,
         },
         meetingLink: {
             type: String,
@@ -24,10 +72,18 @@ const interviewSchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
+        round: {
+            type: String,
+            trim: true,
+        },
         status: {
             type: String,
-            enum: ['scheduled', 'completed'],
+            enum: ['scheduled', 'completed', 'cancelled'],
             default: 'scheduled',
+        },
+        feedback: {
+            type: String,
+            trim: true,
         },
     },
     {
@@ -35,8 +91,8 @@ const interviewSchema = new mongoose.Schema(
     }
 );
 
-// Index on applicationId for fast lookups
-interviewSchema.index({ applicationId: 1 });
+interviewSchema.index({ applicationRef: 1 });
+interviewSchema.index({ companyId: 1 });
 
 const Interview = mongoose.model('Interview', interviewSchema);
 

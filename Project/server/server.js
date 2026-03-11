@@ -11,6 +11,8 @@ import companyRoutes from './routes/companyRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
+import publicRoutes from './routes/publicRoutes.js';
+import dashboardRoutes from './routes/dashboardRoutes.js';
 
 // Load env variables first
 dotenv.config();
@@ -39,6 +41,8 @@ app.use('/api/company', companyRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api', publicRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // ─── Health check ───
 app.get('/api/health', (req, res) => {

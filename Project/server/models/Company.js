@@ -2,15 +2,33 @@ import mongoose from 'mongoose';
 
 const companySchema = new mongoose.Schema(
     {
+        companyId: {
+            type: String,
+            unique: true,
+            required: [true, 'Company ID is required'],
+            trim: true,
+        },
         userId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
-            required: [true, 'User reference is required'],
-            unique: true,
+            sparse: true,
         },
-        companyName: {
+        name: {
             type: String,
             required: [true, 'Company name is required'],
+            trim: true,
+        },
+        // Keep legacy field for backward compat
+        companyName: {
+            type: String,
+            trim: true,
+        },
+        industry: {
+            type: String,
+            trim: true,
+        },
+        location: {
+            type: String,
             trim: true,
         },
         website: {
@@ -21,7 +39,7 @@ const companySchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
-        location: {
+        hrName: {
             type: String,
             trim: true,
         },
@@ -30,9 +48,26 @@ const companySchema = new mongoose.Schema(
             lowercase: true,
             trim: true,
         },
+        hrPhone: {
+            type: String,
+            trim: true,
+        },
+        // Legacy field
         contactNumber: {
             type: String,
             trim: true,
+        },
+        logo: {
+            type: String,
+            trim: true,
+        },
+        isActive: {
+            type: Boolean,
+            default: true,
+        },
+        isApproved: {
+            type: Boolean,
+            default: false,
         },
         jobsPosted: [
             {
@@ -40,18 +75,14 @@ const companySchema = new mongoose.Schema(
                 ref: 'Job',
             },
         ],
-        isApproved: {
-            type: Boolean,
-            default: false,
-        },
     },
     {
         timestamps: true,
     }
 );
 
-// Index on userId for fast lookups
 companySchema.index({ userId: 1 });
+companySchema.index({ companyId: 1 });
 
 const Company = mongoose.model('Company', companySchema);
 

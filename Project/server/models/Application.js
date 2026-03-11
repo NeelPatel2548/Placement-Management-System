@@ -2,33 +2,76 @@ import mongoose from 'mongoose';
 
 const applicationSchema = new mongoose.Schema(
     {
+        applicationId: {
+            type: String,
+            unique: true,
+            sparse: true,
+            trim: true,
+        },
         studentId: {
+            type: String,
+            trim: true,
+        },
+        // Keep ObjectId ref for existing flow
+        studentRef: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Student',
-            required: [true, 'Student reference is required'],
+        },
+        studentName: {
+            type: String,
+            trim: true,
         },
         jobId: {
+            type: String,
+            trim: true,
+        },
+        // Keep ObjectId ref for existing flow
+        jobRef: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Job',
-            required: [true, 'Job reference is required'],
+        },
+        jobTitle: {
+            type: String,
+            trim: true,
         },
         companyId: {
+            type: String,
+            trim: true,
+        },
+        // Keep ObjectId ref for existing flow
+        companyRef: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Company',
-            required: [true, 'Company reference is required'],
+        },
+        companyName: {
+            type: String,
+            trim: true,
         },
         resumeId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Resume',
         },
-        status: {
-            type: String,
-            enum: ['applied', 'shortlisted', 'rejected', 'selected'],
-            default: 'applied',
+        appliedAt: {
+            type: Date,
+            default: Date.now,
         },
+        // Legacy field
         appliedDate: {
             type: Date,
             default: Date.now,
+        },
+        status: {
+            type: String,
+            enum: ['applied', 'shortlisted', 'interview', 'hired', 'rejected', 'selected'],
+            default: 'applied',
+        },
+        currentRound: {
+            type: String,
+            trim: true,
+        },
+        remarks: {
+            type: String,
+            trim: true,
         },
         interviewId: {
             type: mongoose.Schema.Types.ObjectId,
@@ -40,8 +83,8 @@ const applicationSchema = new mongoose.Schema(
     }
 );
 
-// Prevent duplicate applications: one student per job
-applicationSchema.index({ studentId: 1, jobId: 1 }, { unique: true });
+applicationSchema.index({ studentRef: 1, jobRef: 1 }, { unique: true, sparse: true });
+applicationSchema.index({ companyRef: 1 });
 applicationSchema.index({ companyId: 1 });
 applicationSchema.index({ status: 1 });
 

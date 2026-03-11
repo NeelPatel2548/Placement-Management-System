@@ -36,6 +36,9 @@ import CompanyPostJob from './components/company/CompanyPostJob';
 import CompanyApplicants from './components/company/CompanyApplicants';
 import CompanyInterviews from './components/company/CompanyInterviews';
 import CompanyProfile from './components/company/CompanyProfile';
+import CompanyReports from './components/company/CompanyReports';
+import CompanyMessages from './components/company/CompanyMessages';
+import CompanyNotifications from './components/company/CompanyNotifications';
 
 // Admin Dashboard
 import { AdminLayout } from './components/admin/AdminLayout';
@@ -93,10 +96,15 @@ export default function App() {
         {/* Company Routes */}
         <Route path="/company" element={<ProtectedRoute role="company"><CompanyLayout /></ProtectedRoute>}>
           <Route index element={<CompanyHome />} />
+          <Route path="jobs" element={<CompanyPostJob />} />
           <Route path="post-job" element={<CompanyPostJob />} />
           <Route path="applicants" element={<CompanyApplicants />} />
+          <Route path="applications" element={<CompanyApplicants />} />
           <Route path="interviews" element={<CompanyInterviews />} />
           <Route path="profile" element={<CompanyProfile />} />
+          <Route path="reports" element={<CompanyReports />} />
+          <Route path="messages" element={<CompanyMessages />} />
+          <Route path="notifications" element={<CompanyNotifications />} />
         </Route>
 
         {/* Admin Routes */}

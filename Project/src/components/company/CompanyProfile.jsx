@@ -1,12 +1,29 @@
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HiGlobe, HiMail, HiPhone, HiLocationMarker, HiPencil, HiCheckCircle } from 'react-icons/hi';
-import { companyMockProfile } from './companyMockData';
+import api from '../../services/api';
 
 export default function CompanyProfile() {
     const [editing, setEditing] = useState(false);
     const [saved, setSaved] = useState(false);
-    const [form, setForm] = useState(companyMockProfile);
+    const [form, setForm] = useState({ companyName: '', description: '', website: '', location: '', hrEmail: '', contactNumber: '', isApproved: false });
+    const [originalForm, setOriginalForm] = useState(null);
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const res = await api.get('/api/companies');
+                const companies = res.data.companies || [];
+                if (companies.length > 0) {
+                    const c = companies[0];
+                    const data = { companyName: c.name || c.companyName || '', description: c.description || '', website: c.website || '', location: c.location || '', hrEmail: c.hrEmail || '', contactNumber: c.hrPhone || c.contactNumber || '', isApproved: c.isApproved || c.isActive || false };
+                    setForm(data);
+                    setOriginalForm(data);
+                }
+            } catch (err) { console.error(err); }
+        };
+        fetchProfile();
+    }, []);
 
     const handleSave = () => {
         setEditing(false);
@@ -111,7 +128,7 @@ export default function CompanyProfile() {
                 {editing && (
                     <div className="flex gap-3 mt-6 pt-6 border-t border-white/5">
                         <button onClick={handleSave} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold">Save Changes</button>
-                        <button onClick={() => { setForm(companyMockProfile); setEditing(false); }} className="px-5 py-2.5 rounded-xl bg-white/5 text-white/50 text-sm font-medium hover:bg-white/10 transition-colors">Cancel</button>
+                        <button onClick={() => { setForm(originalForm || form); setEditing(false); }} className="px-5 py-2.5 rounded-xl bg-white/5 text-white/50 text-sm font-medium hover:bg-white/10 transition-colors">Cancel</button>
                     </div>
                 )}
             </motion.div>

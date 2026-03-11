@@ -2,15 +2,41 @@ import mongoose from 'mongoose';
 
 const messageSchema = new mongoose.Schema(
     {
+        messageId: {
+            type: String,
+            unique: true,
+            sparse: true,
+            trim: true,
+        },
         senderId: {
+            type: String,
+            trim: true,
+        },
+        // Keep ObjectId ref for existing flow
+        senderRef: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
-            required: [true, 'Sender reference is required'],
+        },
+        senderName: {
+            type: String,
+            trim: true,
+        },
+        senderRole: {
+            type: String,
+            enum: ['student', 'company', 'admin'],
         },
         receiverId: {
+            type: String,
+            trim: true,
+        },
+        // Keep ObjectId ref for existing flow
+        receiverRef: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
-            required: [true, 'Receiver reference is required'],
+        },
+        receiverName: {
+            type: String,
+            trim: true,
         },
         subject: {
             type: String,
@@ -21,9 +47,17 @@ const messageSchema = new mongoose.Schema(
             required: [true, 'Message content is required'],
             trim: true,
         },
+        timestamp: {
+            type: Date,
+            default: Date.now,
+        },
         isRead: {
             type: Boolean,
             default: false,
+        },
+        conversationId: {
+            type: String,
+            trim: true,
         },
     },
     {
@@ -31,8 +65,9 @@ const messageSchema = new mongoose.Schema(
     }
 );
 
-messageSchema.index({ senderId: 1, receiverId: 1 });
-messageSchema.index({ receiverId: 1, isRead: 1 });
+messageSchema.index({ senderRef: 1, receiverRef: 1 });
+messageSchema.index({ receiverRef: 1, isRead: 1 });
+messageSchema.index({ conversationId: 1 });
 
 const Message = mongoose.model('Message', messageSchema);
 

@@ -2,10 +2,20 @@ import mongoose from 'mongoose';
 
 const notificationSchema = new mongoose.Schema(
     {
+        notificationId: {
+            type: String,
+            unique: true,
+            sparse: true,
+            trim: true,
+        },
+        // Keep ObjectId ref for existing flow
         userId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
-            required: [true, 'User reference is required'],
+        },
+        targetRole: {
+            type: String,
+            enum: ['student', 'company', 'admin', 'all'],
         },
         title: {
             type: String,
@@ -19,12 +29,20 @@ const notificationSchema = new mongoose.Schema(
         },
         type: {
             type: String,
-            enum: ['job', 'interview', 'result', 'security'],
+            enum: ['job', 'interview', 'result', 'security', 'announcement', 'system'],
             required: [true, 'Notification type is required'],
+        },
+        timestamp: {
+            type: Date,
+            default: Date.now,
         },
         isRead: {
             type: Boolean,
             default: false,
+        },
+        companyId: {
+            type: String,
+            trim: true,
         },
     },
     {
@@ -32,8 +50,8 @@ const notificationSchema = new mongoose.Schema(
     }
 );
 
-// Index on userId and isRead for fetching unread notifications
 notificationSchema.index({ userId: 1, isRead: 1 });
+notificationSchema.index({ targetRole: 1 });
 
 const Notification = mongoose.model('Notification', notificationSchema);
 
