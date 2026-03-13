@@ -2,7 +2,15 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { HiUser, HiAcademicCap, HiBriefcase, HiDocumentText, HiCheck, HiArrowRight, HiArrowLeft } from 'react-icons/hi';
-import { skillOptions } from './mockData';
+
+const skillOptions = [
+    'React', 'Angular', 'Vue.js', 'Node.js', 'Express.js', 'MongoDB', 'PostgreSQL', 'MySQL',
+    'Python', 'Java', 'C++', 'JavaScript', 'TypeScript', 'Go', 'Rust',
+    'AWS', 'Azure', 'GCP', 'Docker', 'Kubernetes',
+    'Machine Learning', 'Data Science', 'Deep Learning',
+    'HTML', 'CSS', 'Tailwind CSS', 'Bootstrap',
+    'Git', 'Linux', 'REST API', 'GraphQL',
+];
 
 const steps = [
     { icon: HiUser, label: 'Personal' },

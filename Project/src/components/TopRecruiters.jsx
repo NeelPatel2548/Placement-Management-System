@@ -1,7 +1,9 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
+import api from '../services/api';
 
-const companies = [
+const defaultCompanies = [
     { name: 'Google', color: '#4285F4' },
     { name: 'Microsoft', color: '#00A4EF' },
     { name: 'Amazon', color: '#FF9900' },
@@ -10,14 +12,6 @@ const companies = [
     { name: 'Netflix', color: '#E50914' },
     { name: 'Adobe', color: '#FF0000' },
     { name: 'Salesforce', color: '#00A1E0' },
-    { name: 'Oracle', color: '#F80000' },
-    { name: 'IBM', color: '#0F62FE' },
-    { name: 'Deloitte', color: '#86BC25' },
-    { name: 'Infosys', color: '#007CC3' },
-    { name: 'TCS', color: '#2B6CB0' },
-    { name: 'Wipro', color: '#3A1078' },
-    { name: 'Accenture', color: '#A100FF' },
-    { name: 'Capgemini', color: '#0070AD' },
 ];
 
 function CompanyLogo({ name, color }) {
@@ -38,6 +32,36 @@ function CompanyLogo({ name, color }) {
 
 export default function TopRecruiters() {
     const [ref, inView] = useInView({ threshold: 0.1, triggerOnce: true });
+    const [companies, setCompanies] = useState(defaultCompanies);
+    
+    useEffect(() => {
+        const fetchCompanies = async () => {
+            try {
+                // Fetch public companies
+                const res = await api.get('/api/companies');
+                if (res.data.companies && res.data.companies.length > 0) {
+                    // Map DB companies to UI format
+                    const mapped = res.data.companies.map((c, index) => {
+                        const colors = ['#4285F4', '#00A4EF', '#FF9900', '#555555', '#1877F2', '#E50914', '#FF0000', '#00A1E0'];
+                        return {
+                            name: c.companyName || c.name,
+                            color: colors[index % colors.length]
+                        };
+                    });
+                    
+                    // Duplicate if not enough to fill the marquee smoothly
+                    const finalArray = mapped.length < 8 ? [...mapped, ...mapped, ...mapped, ...mapped] : mapped;
+                    setCompanies(finalArray);
+                }
+            } catch (err) {
+                console.error('Failed to load companies, using defaults');
+            }
+        };
+        fetchCompanies();
+    }, []);
+
+    const row1 = companies.slice(0, Math.ceil(companies.length / 2));
+    const row2 = companies.slice(Math.ceil(companies.length / 2));
 
     return (
         <section id="recruiters" className="py-24 lg:py-32 bg-gray-50 relative overflow-hidden">
@@ -67,7 +91,7 @@ export default function TopRecruiters() {
                 <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-gray-50 to-transparent z-10" />
                 <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-gray-50 to-transparent z-10" />
                 <div className="flex animate-marquee">
-                    {[...companies.slice(0, 8), ...companies.slice(0, 8)].map((c, i) => (
+                    {[...row1, ...row1, ...row1].map((c, i) => (
                         <CompanyLogo key={i} name={c.name} color={c.color} />
                     ))}
                 </div>
@@ -78,7 +102,7 @@ export default function TopRecruiters() {
                 <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-gray-50 to-transparent z-10" />
                 <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-gray-50 to-transparent z-10" />
                 <div className="flex animate-marquee" style={{ animationDirection: 'reverse', animationDuration: '35s' }}>
-                    {[...companies.slice(8), ...companies.slice(8)].map((c, i) => (
+                    {[...row2, ...row2, ...row2].map((c, i) => (
                         <CompanyLogo key={i} name={c.name} color={c.color} />
                     ))}
                 </div>

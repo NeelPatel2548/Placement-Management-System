@@ -1,7 +1,8 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { HiBriefcase, HiPaperAirplane, HiCalendar, HiStar, HiLocationMarker, HiClock, HiExternalLink } from 'react-icons/hi';
 import StatsCard from './StatsCard';
-import { mockUser, mockStudent, mockStats, mockJobs, mockApplications, mockInterviews, mockNotifications } from './mockData';
+import api from '../../services/api';
 
 const statusColors = {
     applied: 'bg-blue-500/15 text-blue-400 border-blue-500/20',
@@ -13,15 +14,82 @@ const statusColors = {
 
 export default function DashboardHome() {
     const user = JSON.parse(localStorage.getItem('pms_user') || '{}');
-    const name = user.name || mockUser.name;
+    const name = user.name || 'Student';
 
-    // Profile completion
-    const profilePercent = 85;
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [stats, setStats] = useState({ jobsAvailable: 0, applicationsSent: 0, interviewsScheduled: 0, offersReceived: 0 });
+    const [placementStatus, setPlacementStatus] = useState('unplaced');
+    const [jobs, setJobs] = useState([]);
+    const [applications, setApplications] = useState([]);
+    const [interviews, setInterviews] = useState([]);
+    const [notifications, setNotifications] = useState([]);
+    const [profilePercent, setProfilePercent] = useState(0);
+    const [resumeInfo, setResumeInfo] = useState(null);
 
-    // Eligible jobs (mock filter: cgpa >= job.eligibilityCgpa and branch in job.eligibleBranches)
-    const eligibleJobs = mockJobs.filter(
-        j => mockStudent.cgpa >= j.eligibilityCgpa && j.eligibleBranches.includes(mockStudent.branch)
-    ).slice(0, 4);
+    useEffect(() => {
+        const fetchAll = async () => {
+            try {
+                setLoading(true);
+                const [dashRes, jobsRes, appsRes, ivsRes, notifRes, profileRes] = await Promise.allSettled([
+                    api.get('/api/student/dashboard'),
+                    api.get('/api/student/jobs'),
+                    api.get('/api/student/applications'),
+                    api.get('/api/student/interviews'),
+                    api.get('/api/student/notifications'),
+                    api.get('/api/student/profile'),
+                ]);
+
+                if (dashRes.status === 'fulfilled') {
+                    const d = dashRes.value.data;
+                    setStats(d.stats || {});
+                    setPlacementStatus(d.placementStatus || 'unplaced');
+                }
+                if (jobsRes.status === 'fulfilled') setJobs(jobsRes.value.data.jobs || []);
+                if (appsRes.status === 'fulfilled') setApplications(appsRes.value.data.applications || []);
+                if (ivsRes.status === 'fulfilled') setInterviews(ivsRes.value.data.interviews || []);
+                if (notifRes.status === 'fulfilled') setNotifications(notifRes.value.data.notifications || []);
+
+                if (profileRes.status === 'fulfilled') {
+                    const student = profileRes.value.data.student || {};
+                    // Calculate profile completion
+                    const fields = ['phone', 'dob', 'gender', 'address', 'enrollmentNo', 'branch', 'tenthPercentage', 'twelfthPercentage', 'cgpa', 'currentSemester', 'linkedin', 'github'];
+                    const filled = fields.filter(f => student[f]).length;
+                    const hasSkills = (student.skills || []).length > 0 ? 1 : 0;
+                    const hasResume = student.resumeId ? 1 : 0;
+                    setProfilePercent(Math.round(((filled + hasSkills + hasResume) / (fields.length + 2)) * 100));
+                    if (student.resumeId) {
+                        setResumeInfo(typeof student.resumeId === 'object' ? student.resumeId : { _id: student.resumeId });
+                    }
+                }
+            } catch (err) {
+                setError('Failed to load dashboard data');
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchAll();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="w-10 h-10 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 text-center">
+                <p className="text-red-400 text-sm mb-2">{error}</p>
+                <button onClick={() => window.location.reload()} className="px-4 py-2 rounded-xl bg-primary-500/20 text-primary-400 text-sm font-medium hover:bg-primary-500/30 transition-colors">Retry</button>
+            </div>
+        );
+    }
+
+    const eligibleJobs = jobs.slice(0, 4);
 
     return (
         <div className="space-y-6">
@@ -33,11 +101,11 @@ export default function DashboardHome() {
                         <p className="text-white/40 text-sm mt-1">Here's your placement dashboard overview</p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${mockStudent.placementStatus === 'placed'
+                        <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${placementStatus === 'placed'
                             ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20'
                             : 'bg-amber-500/15 text-amber-400 border-amber-500/20'
                             }`}>
-                            {mockStudent.placementStatus === 'placed' ? '✓ Placed' : '○ Not Placed'}
+                            {placementStatus === 'placed' ? '✓ Placed' : '○ Not Placed'}
                         </span>
                     </div>
                 </div>
@@ -55,10 +123,10 @@ export default function DashboardHome() {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatsCard icon={HiBriefcase} label="Jobs Available" value={mockStats.jobsAvailable} color="indigo" delay={0.1} />
-                <StatsCard icon={HiPaperAirplane} label="Applications Sent" value={mockStats.applicationsSent} color="emerald" delay={0.15} />
-                <StatsCard icon={HiCalendar} label="Interviews" value={mockStats.interviewsScheduled} color="amber" delay={0.2} />
-                <StatsCard icon={HiStar} label="Offers Received" value={mockStats.offersReceived} color="rose" delay={0.25} />
+                <StatsCard icon={HiBriefcase} label="Jobs Available" value={stats.jobsAvailable || 0} color="indigo" delay={0.1} />
+                <StatsCard icon={HiPaperAirplane} label="Applications Sent" value={stats.applicationsSent || 0} color="emerald" delay={0.15} />
+                <StatsCard icon={HiCalendar} label="Interviews" value={stats.interviewsScheduled || 0} color="amber" delay={0.2} />
+                <StatsCard icon={HiStar} label="Offers Received" value={stats.offersReceived || 0} color="rose" delay={0.25} />
             </div>
 
             {/* Eligible Jobs + Notifications */}
@@ -69,27 +137,33 @@ export default function DashboardHome() {
                         <h2 className="text-white font-semibold">Eligible Jobs</h2>
                         <a href="/student/jobs" className="text-primary-400 text-xs font-medium hover:text-primary-300">View All →</a>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {eligibleJobs.map(job => (
-                            <div key={job.id} className="bg-white/5 border border-white/5 rounded-xl p-4 hover:border-primary-500/20 transition-all group">
-                                <div className="flex items-start gap-3">
-                                    <span className="text-2xl">{job.logo}</span>
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="text-white font-medium text-sm truncate">{job.role}</h3>
-                                        <p className="text-white/50 text-xs">{job.company}</p>
+                    {eligibleJobs.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {eligibleJobs.map(job => (
+                                <div key={job._id} className="bg-white/5 border border-white/5 rounded-xl p-4 hover:border-primary-500/20 transition-all group">
+                                    <div className="flex items-start gap-3">
+                                        <span className="text-2xl">💼</span>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-white font-medium text-sm truncate">{job.title}</h3>
+                                            <p className="text-white/50 text-xs">{job.companyId?.companyName || job.companyName || 'Company'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3 mt-3 text-xs text-white/40">
+                                        <span className="flex items-center gap-1"><HiLocationMarker className="w-3 h-3" />{job.location || 'Remote'}</span>
+                                        <span className="text-emerald-400 font-semibold">{job.salary || job.package ? `${job.salary || job.package} LPA` : '—'}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between mt-3">
+                                        <span className="flex items-center gap-1 text-[11px] text-white/30"><HiClock className="w-3 h-3" />Deadline: {job.deadline ? new Date(job.deadline).toLocaleDateString() : '—'}</span>
+                                        <a href="/student/jobs" className="px-3 py-1 rounded-lg bg-primary-500/20 text-primary-400 text-[11px] font-medium hover:bg-primary-500/30 transition-colors">Apply</a>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3 mt-3 text-xs text-white/40">
-                                    <span className="flex items-center gap-1"><HiLocationMarker className="w-3 h-3" />{job.location}</span>
-                                    <span className="text-emerald-400 font-semibold">{job.salary}</span>
-                                </div>
-                                <div className="flex items-center justify-between mt-3">
-                                    <span className="flex items-center gap-1 text-[11px] text-white/30"><HiClock className="w-3 h-3" />Deadline: {job.deadline}</span>
-                                    <button className="px-3 py-1 rounded-lg bg-primary-500/20 text-primary-400 text-[11px] font-medium hover:bg-primary-500/30 transition-colors">Apply</button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-8">
+                            <p className="text-white/30 text-sm">No eligible jobs available right now</p>
+                        </div>
+                    )}
                 </motion.div>
 
                 {/* Notifications */}
@@ -98,14 +172,20 @@ export default function DashboardHome() {
                         <h2 className="text-white font-semibold">Notifications</h2>
                         <a href="/student/notifications" className="text-primary-400 text-xs font-medium hover:text-primary-300">View All →</a>
                     </div>
-                    <div className="space-y-3">
-                        {mockNotifications.slice(0, 4).map(n => (
-                            <div key={n.id} className={`p-3 rounded-xl border transition-colors cursor-pointer ${!n.read ? 'bg-primary-500/5 border-primary-500/10' : 'bg-white/[0.02] border-white/5'}`}>
-                                <p className="text-white/80 text-sm font-medium">{n.title}</p>
-                                <p className="text-white/30 text-xs mt-0.5">{n.time}</p>
-                            </div>
-                        ))}
-                    </div>
+                    {notifications.length > 0 ? (
+                        <div className="space-y-3">
+                            {notifications.slice(0, 4).map(n => (
+                                <div key={n._id} className={`p-3 rounded-xl border transition-colors cursor-pointer ${!n.isRead ? 'bg-primary-500/5 border-primary-500/10' : 'bg-white/[0.02] border-white/5'}`}>
+                                    <p className="text-white/80 text-sm font-medium">{n.title}</p>
+                                    <p className="text-white/30 text-xs mt-0.5">{n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}</p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-8">
+                            <p className="text-white/30 text-sm">No notifications yet</p>
+                        </div>
+                    )}
                 </motion.div>
             </div>
 
@@ -114,55 +194,67 @@ export default function DashboardHome() {
                 {/* Applications */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-[#0f1120] border border-white/5 rounded-2xl p-5">
                     <h2 className="text-white font-semibold mb-4">Recent Applications</h2>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead><tr className="text-white/30 text-xs border-b border-white/5">
-                                <th className="text-left pb-3 font-medium">Company</th>
-                                <th className="text-left pb-3 font-medium">Role</th>
-                                <th className="text-left pb-3 font-medium">Status</th>
-                            </tr></thead>
-                            <tbody>
-                                {mockApplications.slice(0, 5).map(app => (
-                                    <tr key={app.id} className="border-b border-white/5 last:border-0">
-                                        <td className="py-3 text-white/80 font-medium">{app.company}</td>
-                                        <td className="py-3 text-white/50">{app.role}</td>
-                                        <td className="py-3">
-                                            <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${statusColors[app.status]}`}>
-                                                {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                    {applications.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead><tr className="text-white/30 text-xs border-b border-white/5">
+                                    <th className="text-left pb-3 font-medium">Company</th>
+                                    <th className="text-left pb-3 font-medium">Role</th>
+                                    <th className="text-left pb-3 font-medium">Status</th>
+                                </tr></thead>
+                                <tbody>
+                                    {applications.slice(0, 5).map(app => (
+                                        <tr key={app._id} className="border-b border-white/5 last:border-0">
+                                            <td className="py-3 text-white/80 font-medium">{app.jobId?.companyId?.companyName || app.jobId?.companyName || '—'}</td>
+                                            <td className="py-3 text-white/50">{app.jobId?.title || '—'}</td>
+                                            <td className="py-3">
+                                                <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${statusColors[app.status] || statusColors.applied}`}>
+                                                    {app.status?.charAt(0).toUpperCase() + app.status?.slice(1)}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="text-center py-8">
+                            <p className="text-white/30 text-sm">No applications yet. Start applying to jobs!</p>
+                        </div>
+                    )}
                 </motion.div>
 
                 {/* Interviews */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }} className="bg-[#0f1120] border border-white/5 rounded-2xl p-5">
                     <h2 className="text-white font-semibold mb-4">Upcoming Interviews</h2>
-                    <div className="space-y-3">
-                        {mockInterviews.map(iv => (
-                            <div key={iv.id} className="bg-white/5 border border-white/5 rounded-xl p-4 hover:border-primary-500/20 transition-all">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h3 className="text-white font-medium text-sm">{iv.company}</h3>
-                                        <p className="text-white/40 text-xs mt-0.5">{iv.date} at {iv.time}</p>
+                    {interviews.length > 0 ? (
+                        <div className="space-y-3">
+                            {interviews.map(iv => (
+                                <div key={iv._id} className="bg-white/5 border border-white/5 rounded-xl p-4 hover:border-primary-500/20 transition-all">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h3 className="text-white font-medium text-sm">{iv.applicationId?.jobId?.companyId?.companyName || 'Company'}</h3>
+                                            <p className="text-white/40 text-xs mt-0.5">{iv.interviewDate ? new Date(iv.interviewDate).toLocaleDateString() : '—'} at {iv.interviewTime || '—'}</p>
+                                        </div>
+                                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${iv.mode === 'online'
+                                            ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
+                                            : 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
+                                            }`}>{iv.mode === 'online' ? 'Online' : 'Offline'}</span>
                                     </div>
-                                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${iv.type === 'Online'
-                                        ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
-                                        : 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
-                                        }`}>{iv.type}</span>
+                                    {iv.mode === 'online' && iv.meetLink && (
+                                        <a href={iv.meetLink} target="_blank" rel="noopener noreferrer"
+                                            className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/15 text-blue-400 text-xs font-medium hover:bg-blue-500/25 transition-colors w-fit">
+                                            <HiExternalLink className="w-3.5 h-3.5" /> Join Meeting
+                                        </a>
+                                    )}
                                 </div>
-                                {iv.type === 'Online' && iv.meetLink && (
-                                    <a href={iv.meetLink} target="_blank" rel="noopener noreferrer"
-                                        className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/15 text-blue-400 text-xs font-medium hover:bg-blue-500/25 transition-colors w-fit">
-                                        <HiExternalLink className="w-3.5 h-3.5" /> Join Meeting
-                                    </a>
-                                )}
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-8">
+                            <p className="text-white/30 text-sm">No interviews scheduled yet</p>
+                        </div>
+                    )}
                 </motion.div>
             </div>
 
@@ -175,13 +267,20 @@ export default function DashboardHome() {
                             <HiDocumentText className="w-6 h-6 text-primary-400" />
                         </div>
                         <div>
-                            <p className="text-white font-medium text-sm">Resume {mockStudent.resumeVersion}</p>
-                            <p className="text-white/40 text-xs">Last updated: {mockStudent.resumeLastUpdated}</p>
+                            <p className="text-white font-medium text-sm">
+                                {resumeInfo ? `Resume ${resumeInfo.version || ''}` : 'No resume uploaded'}
+                            </p>
+                            <p className="text-white/40 text-xs">
+                                {resumeInfo?.createdAt ? `Uploaded: ${new Date(resumeInfo.createdAt).toLocaleDateString()}` : 'Upload your resume to apply'}
+                            </p>
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <button className="px-4 py-2 rounded-xl bg-white/5 text-white/60 text-sm font-medium hover:bg-white/10 transition-colors">Download</button>
-                        <button className="px-4 py-2 rounded-xl bg-primary-500/20 text-primary-400 text-sm font-medium hover:bg-primary-500/30 transition-colors">Upload New</button>
+                        {resumeInfo?.fileUrl && (
+                            <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${resumeInfo.fileUrl}`} target="_blank" rel="noopener noreferrer"
+                                className="px-4 py-2 rounded-xl bg-white/5 text-white/60 text-sm font-medium hover:bg-white/10 transition-colors">Download</a>
+                        )}
+                        <a href="/student/profile" className="px-4 py-2 rounded-xl bg-primary-500/20 text-primary-400 text-sm font-medium hover:bg-primary-500/30 transition-colors">Upload New</a>
                     </div>
                 </div>
             </motion.div>

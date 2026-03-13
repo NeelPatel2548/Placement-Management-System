@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import Student from '../models/Student.js';
 import Notification from '../models/Notification.js';
 import { generateOTP, validateOTP, clearOTPFields, OTP_EXPIRY, MAX_OTP_ATTEMPTS } from '../services/otpService.js';
 import { sendOTPEmail, sendPasswordResetOTPEmail, sendPasswordChangedEmail } from '../services/emailService.js';
@@ -66,6 +67,11 @@ export const register = async (req, res) => {
             otpExpiry,
             otpAttempts: 0,
         });
+
+        // If registering as student, create a Student document
+        if (role === 'student') {
+            await Student.create({ userId: user._id });
+        }
 
         // Send OTP email
         await sendOTPEmail(email, name, otp, 'verify');

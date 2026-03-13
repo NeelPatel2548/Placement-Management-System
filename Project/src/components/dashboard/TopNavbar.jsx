@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HiMenu, HiSearch, HiBell, HiChevronDown, HiLogout, HiCog, HiUser } from 'react-icons/hi';
 import { motion, AnimatePresence } from 'framer-motion';
-import { mockNotifications } from './mockData';
+
+// Using an empty array temporarily since mockData was removed.
+// Real notifications are fetched in the NotificationsPage component.
+const mockNotifications = [];
 
 export default function TopNavbar({ onMenuClick }) {
     const navigate = useNavigate();

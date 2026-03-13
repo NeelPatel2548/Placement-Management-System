@@ -1,17 +1,42 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import CountUp from 'react-countup';
 import { HiUsers, HiOfficeBuilding, HiBriefcase, HiTrendingUp } from 'react-icons/hi';
+import api from '../services/api';
 
-const stats = [
-    { icon: HiUsers, value: 10000, suffix: '+', label: 'Students Registered', gradient: 'from-blue-500 to-cyan-400' },
-    { icon: HiOfficeBuilding, value: 500, suffix: '+', label: 'Companies Hiring', gradient: 'from-purple-500 to-pink-400' },
-    { icon: HiBriefcase, value: 2500, suffix: '+', label: 'Jobs Posted', gradient: 'from-orange-500 to-amber-400' },
+const defaultStats = [
+    { icon: HiUsers, value: 3, suffix: '+', label: 'Students Registered', gradient: 'from-blue-500 to-cyan-400' },
+    { icon: HiOfficeBuilding, value: 5, suffix: '+', label: 'Companies Hiring', gradient: 'from-purple-500 to-pink-400' },
+    { icon: HiBriefcase, value: 10, suffix: '+', label: 'Jobs Posted', gradient: 'from-orange-500 to-amber-400' },
     { icon: HiTrendingUp, value: 95, suffix: '%', label: 'Placement Rate', gradient: 'from-emerald-500 to-teal-400' },
 ];
 
 export default function Statistics() {
     const [ref, inView] = useInView({ threshold: 0.3, triggerOnce: true });
+    const [stats, setStats] = useState(defaultStats);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                // Determine if we can fetch public stats, e.g. from total document counts
+                // For this project, let's hit a public route or fallback if it fails
+                // Assuming we might have to use default stats if there's no public open endpoint
+                const res = await api.get('/api/dashboard/stats');
+                if (res.data.stats) {
+                    setStats([
+                        { icon: HiUsers, value: res.data.stats.totalStudents || 100, suffix: '+', label: 'Students Registered', gradient: 'from-blue-500 to-cyan-400' },
+                        { icon: HiOfficeBuilding, value: res.data.stats.totalCompanies || 20, suffix: '+', label: 'Companies Hiring', gradient: 'from-purple-500 to-pink-400' },
+                        { icon: HiBriefcase, value: res.data.stats.totalJobs || 50, suffix: '+', label: 'Jobs Posted', gradient: 'from-orange-500 to-amber-400' },
+                        { icon: HiTrendingUp, value: res.data.stats.placementRate || 95, suffix: '%', label: 'Placement Rate', gradient: 'from-emerald-500 to-teal-400' },
+                    ]);
+                }
+            } catch (err) {
+                console.log('Using default stats, public stat endpoint not attached');
+            }
+        };
+        fetchStats();
+    }, []);
 
     return (
         <section className="py-24 lg:py-32 relative overflow-hidden">
