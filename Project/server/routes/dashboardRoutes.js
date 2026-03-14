@@ -4,8 +4,7 @@ import { getDashboardStats } from '../controllers/dashboardController.js';
 
 const router = express.Router();
 
-// Protected route
-router.use(protect);
+// Stats route is public
 
 router.get('/stats', getDashboardStats);
 

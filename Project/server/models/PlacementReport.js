@@ -90,7 +90,6 @@ const placementReportSchema = new mongoose.Schema(
     }
 );
 
-placementReportSchema.index({ reportId: 1 });
 placementReportSchema.index({ companyId: 1 });
 
 const PlacementReport = mongoose.model('PlacementReport', placementReportSchema);

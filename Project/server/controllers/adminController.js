@@ -54,7 +54,7 @@ export const approveCompany = async (req, res) => {
         const company = await Company.findByIdAndUpdate(
             req.params.companyId,
             { isApproved: true },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!company) {
@@ -82,7 +82,7 @@ export const rejectCompany = async (req, res) => {
         const company = await Company.findByIdAndUpdate(
             req.params.companyId,
             { isApproved: false },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!company) {

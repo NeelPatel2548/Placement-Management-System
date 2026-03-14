@@ -9,19 +9,18 @@ import {
 
 const router = express.Router();
 
-// All routes are protected (require JWT)
-router.use(protect);
+// Routes below this are completely public and do not require JWT
 
 // Companies
 router.get('/companies', getCompanies);
 
 // Jobs
 router.get('/jobs', getJobs);
-router.post('/jobs', createJob);
+router.post('/jobs', protect, createJob);
 
 // Applications
 router.get('/applications', getApplications);
-router.patch('/applications/:id', updateApplication);
+router.patch('/applications/:id', protect, updateApplication);
 
 // Interviews
 router.get('/interviews', getInterviews);

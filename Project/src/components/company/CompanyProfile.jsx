@@ -25,10 +25,16 @@ export default function CompanyProfile() {
         fetchProfile();
     }, []);
 
-    const handleSave = () => {
-        setEditing(false);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
+    const handleSave = async () => {
+        try {
+            await api.put('/api/company/profile', form);
+            setOriginalForm(form);
+            setEditing(false);
+            setSaved(true);
+            setTimeout(() => setSaved(false), 3000);
+        } catch (err) {
+            console.error('Failed to save company profile:', err);
+        }
     };
 
     const inputClass = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/30 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all";

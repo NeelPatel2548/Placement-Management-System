@@ -46,7 +46,7 @@ export const updateProfile = async (req, res) => {
             company = await Company.findOneAndUpdate(
                 { userId: req.user._id },
                 { $set: updates },
-                { new: true, runValidators: true }
+                { returnDocument: 'after', runValidators: true }
             );
         }
 

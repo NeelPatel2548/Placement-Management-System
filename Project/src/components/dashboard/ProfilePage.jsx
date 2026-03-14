@@ -51,7 +51,19 @@ export default function ProfilePage() {
         try {
             setSaving(true);
             setSaveMsg('');
-            await api.put('/api/student/profile', profile);
+            
+            // Clean payload to prevent Mongoose CastErrors with empty strings on Number fields
+            const payload = { ...profile };
+            const numericFields = ['tenthPercentage', 'twelfthPercentage', 'cgpa', 'currentSemester'];
+            numericFields.forEach(field => {
+                if (payload[field] === '') {
+                    payload[field] = null; // Send null instead of empty string
+                } else if (payload[field] !== undefined && payload[field] !== null) {
+                    payload[field] = Number(payload[field]);
+                }
+            });
+
+            await api.put('/api/student/profile', payload);
             setSaveMsg('Profile updated successfully!');
             setEditing(null);
             setTimeout(() => setSaveMsg(''), 3000);

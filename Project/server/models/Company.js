@@ -81,8 +81,7 @@ const companySchema = new mongoose.Schema(
     }
 );
 
-companySchema.index({ userId: 1 });
-companySchema.index({ companyId: 1 });
+
 
 const Company = mongoose.model('Company', companySchema);
 
