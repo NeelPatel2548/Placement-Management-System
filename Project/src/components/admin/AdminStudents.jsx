@@ -1,23 +1,70 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
 import { HiSearch, HiTrash } from 'react-icons/hi';
-import { adminMockStudents } from './adminMockData';
+import { Loader2 } from 'lucide-react';
+import api from '../../services/api';
 
 export default function AdminStudents() {
     const [search, setSearch] = useState('');
     const [branchFilter, setBranchFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
-    const [students] = useState(adminMockStudents);
+    const [students, setStudents] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        const fetchStudents = async () => {
+            try {
+                const res = await api.get('/api/admin/students');
+                setStudents(res.data.students || []);
+            } catch (err) {
+                setError('Failed to load students');
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchStudents();
+    }, []);
+
+    const handleDelete = async (userId) => {
+        if (!confirm('Are you sure you want to delete this student?')) return;
+        try {
+            await api.delete(`/api/admin/users/${userId}`);
+            setStudents(prev => prev.filter(s => (s.userId?._id || s.userId) !== userId));
+        } catch (err) {
+            console.error('Delete error:', err);
+        }
+    };
 
     const filtered = students.filter(s => {
-        if (search && !s.name.toLowerCase().includes(search.toLowerCase()) && !s.email.toLowerCase().includes(search.toLowerCase())) return false;
+        const name = s.userId?.name || s.name || '';
+        const email = s.userId?.email || s.email || '';
+        if (search && !name.toLowerCase().includes(search.toLowerCase()) && !email.toLowerCase().includes(search.toLowerCase())) return false;
         if (branchFilter !== 'all' && s.branch !== branchFilter) return false;
         if (statusFilter === 'placed' && s.placementStatus !== 'placed') return false;
         if (statusFilter === 'unplaced' && s.placementStatus !== 'unplaced') return false;
         return true;
     });
 
-    const branches = [...new Set(students.map(s => s.branch))];
+    const branches = [...new Set(students.map(s => s.branch).filter(Boolean))];
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-[60vh]">
+                <Loader2 className="w-8 h-8 text-rose-500 animate-spin" />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 text-center">
+                <p className="text-red-400 text-sm mb-2">{error}</p>
+                <button onClick={() => window.location.reload()} className="px-4 py-2 rounded-xl bg-rose-500/20 text-rose-400 text-sm font-medium hover:bg-rose-500/30 transition-colors">Retry</button>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -66,38 +113,44 @@ export default function AdminStudents() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filtered.map(s => (
-                                <tr key={s.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
-                                    <td className="p-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500/20 to-violet-500/20 border border-indigo-500/10 flex items-center justify-center text-indigo-400 font-bold text-xs">
-                                                {s.name.charAt(0)}
+                            {filtered.map(s => {
+                                const name = s.userId?.name || s.name || 'N/A';
+                                const email = s.userId?.email || s.email || '';
+                                const profileDone = s.userId?.profileCompleted || false;
+                                const uid = s.userId?._id || s.userId;
+                                return (
+                                    <tr key={s._id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
+                                        <td className="p-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500/20 to-violet-500/20 border border-indigo-500/10 flex items-center justify-center text-indigo-400 font-bold text-xs">
+                                                    {name.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <p className="text-white font-medium">{name}</p>
+                                                    <p className="text-white/30 text-xs">{email}</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="text-white font-medium">{s.name}</p>
-                                                <p className="text-white/30 text-xs">{s.email}</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="p-4 text-white/50">{s.branch}</td>
-                                    <td className="p-4 text-white/50">{s.cgpa}</td>
-                                    <td className="p-4">
-                                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${s.profileCompleted ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/15 text-amber-400 border-amber-500/20'}`}>
-                                            {s.profileCompleted ? 'Complete' : 'Incomplete'}
-                                        </span>
-                                    </td>
-                                    <td className="p-4">
-                                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${s.placementStatus === 'placed' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' : 'bg-blue-500/15 text-blue-400 border-blue-500/20'}`}>
-                                            {s.placementStatus === 'placed' ? '✓ Placed' : '○ Unplaced'}
-                                        </span>
-                                    </td>
-                                    <td className="p-4">
-                                        <button className="w-8 h-8 rounded-lg bg-red-500/15 text-red-400 flex items-center justify-center hover:bg-red-500/25 transition-colors" title="Remove">
-                                            <HiTrash className="w-4 h-4" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
+                                        </td>
+                                        <td className="p-4 text-white/50">{s.branch || '—'}</td>
+                                        <td className="p-4 text-white/50">{s.cgpa || '—'}</td>
+                                        <td className="p-4">
+                                            <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${profileDone ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/15 text-amber-400 border-amber-500/20'}`}>
+                                                {profileDone ? 'Complete' : 'Incomplete'}
+                                            </span>
+                                        </td>
+                                        <td className="p-4">
+                                            <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${s.placementStatus === 'placed' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' : 'bg-blue-500/15 text-blue-400 border-blue-500/20'}`}>
+                                                {s.placementStatus === 'placed' ? '✓ Placed' : '○ Unplaced'}
+                                            </span>
+                                        </td>
+                                        <td className="p-4">
+                                            <button onClick={() => handleDelete(uid)} className="w-8 h-8 rounded-lg bg-red-500/15 text-red-400 flex items-center justify-center hover:bg-red-500/25 transition-colors" title="Remove">
+                                                <HiTrash className="w-4 h-4" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>

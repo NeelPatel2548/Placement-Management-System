@@ -1,21 +1,50 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
 import { HiSpeakerphone, HiCheckCircle } from 'react-icons/hi';
-import { adminMockAnnouncements } from './adminMockData';
+import { Loader2 } from 'lucide-react';
+import api from '../../services/api';
 
 export default function AdminAnnouncements() {
     const [title, setTitle] = useState('');
     const [message, setMessage] = useState('');
     const [sent, setSent] = useState(false);
-    const [announcements] = useState(adminMockAnnouncements);
+    const [sending, setSending] = useState(false);
+    const [announcements, setAnnouncements] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const handleSend = (e) => {
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            try {
+                // Fetch recent notifications as past announcements
+                const res = await api.get('/api/notifications');
+                const notifs = res.data.notifications || [];
+                // Show unique announcements (type 'job' which is used for announcements)
+                setAnnouncements(notifs.filter(n => n.type === 'job').slice(0, 10));
+            } catch (err) {
+                console.error('Fetch announcements error:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchNotifications();
+    }, []);
+
+    const handleSend = async (e) => {
         e.preventDefault();
-        if (!title || !message) return;
-        setSent(true);
-        setTitle('');
-        setMessage('');
-        setTimeout(() => setSent(false), 3000);
+        if (!title || !message || sending) return;
+        setSending(true);
+        try {
+            const res = await api.post('/api/admin/announcements', { title, message });
+            setSent(true);
+            setTitle('');
+            setMessage('');
+            setTimeout(() => setSent(false), 3000);
+        } catch (err) {
+            console.error('Send error:', err);
+            alert('Failed to send announcement');
+        } finally {
+            setSending(false);
+        }
     };
 
     return (
@@ -40,8 +69,9 @@ export default function AdminAnnouncements() {
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/30 focus:outline-none focus:border-rose-500/50" />
                 <textarea value={message} onChange={e => setMessage(e.target.value)} required rows={4} placeholder="Write your announcement..."
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/30 focus:outline-none focus:border-rose-500/50 resize-none" />
-                <button type="submit" className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white text-sm font-semibold hover:shadow-lg hover:shadow-rose-500/20 transition-all">
-                    Send Announcement
+                <button type="submit" disabled={sending}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white text-sm font-semibold hover:shadow-lg hover:shadow-rose-500/20 transition-all disabled:opacity-50">
+                    {sending ? 'Sending...' : 'Send Announcement'}
                 </button>
             </motion.form>
 
@@ -49,18 +79,23 @@ export default function AdminAnnouncements() {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
                 className="bg-[#0f1120] border border-white/5 rounded-2xl p-5">
                 <h3 className="text-white font-semibold mb-4">Past Announcements</h3>
-                <div className="space-y-3">
-                    {announcements.map(a => (
-                        <div key={a.id} className="bg-white/5 border border-white/5 rounded-xl p-4">
-                            <div className="flex items-start justify-between">
-                                <h4 className="text-white font-medium text-sm">{a.title}</h4>
-                                <span className="text-white/30 text-xs">{a.date}</span>
+                {loading ? (
+                    <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 text-rose-500 animate-spin" /></div>
+                ) : announcements.length > 0 ? (
+                    <div className="space-y-3">
+                        {announcements.map(a => (
+                            <div key={a._id} className="bg-white/5 border border-white/5 rounded-xl p-4">
+                                <div className="flex items-start justify-between">
+                                    <h4 className="text-white font-medium text-sm">{a.title}</h4>
+                                    <span className="text-white/30 text-xs">{a.createdAt ? new Date(a.createdAt).toLocaleDateString() : ''}</span>
+                                </div>
+                                <p className="text-white/50 text-sm mt-1">{a.message}</p>
                             </div>
-                            <p className="text-white/50 text-sm mt-1">{a.message}</p>
-                            <p className="text-white/20 text-xs mt-2">Sent to {a.recipients} users</p>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-white/30 text-sm text-center py-6">No announcements sent yet</p>
+                )}
             </motion.div>
         </div>
     );
