@@ -18,9 +18,16 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-// Handle 401 responses (expired/invalid token)
+// Handle responses
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        // Dispatch custom event on successful mutations so sibling components can refetch
+        const method = response.config.method;
+        if (method === 'post' || method === 'put' || method === 'delete') {
+            window.dispatchEvent(new CustomEvent('pms:data-changed'));
+        }
+        return response;
+    },
     (error) => {
         if (error.response && error.response.status === 401) {
             localStorage.removeItem('pms_token');
@@ -32,3 +39,4 @@ api.interceptors.response.use(
 );
 
 export default api;
+

@@ -5,6 +5,7 @@ import {
     postJob, getJobs, getApplicants,
     shortlistCandidate, rejectCandidate,
     scheduleInterview, uploadResults,
+    getCompanyApplications, getCompanyInterviews,
 } from '../controllers/companyController.js';
 
 const router = express.Router();
@@ -26,9 +27,13 @@ router.get('/jobs', getJobs);
 router.get('/jobs/:jobId/applicants', getApplicants);
 router.put('/jobs/:jobId/results', uploadResults);
 
-// Applications
+// Applications — static routes BEFORE dynamic :appId routes
+router.get('/applications', getCompanyApplications);
 router.put('/applications/:appId/shortlist', shortlistCandidate);
 router.put('/applications/:appId/reject', rejectCandidate);
 router.post('/applications/:appId/interview', scheduleInterview);
+
+// Interviews
+router.get('/interviews', getCompanyInterviews);
 
 export default router;

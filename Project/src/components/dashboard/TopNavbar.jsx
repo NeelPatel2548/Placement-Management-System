@@ -1,16 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HiMenu, HiSearch, HiBell, HiChevronDown, HiLogout, HiCog, HiUser } from 'react-icons/hi';
 import { motion, AnimatePresence } from 'framer-motion';
-import { mockNotifications } from './mockData';
+import { HiBell, HiChevronDown, HiLogout, HiUser, HiCog } from 'react-icons/hi';
+import api from '../../services/api';
+import { useRefreshOnChange } from '../../hooks/useRefreshOnChange';
 
-export default function TopNavbar({ onMenuClick }) {
+export default function TopNavbar() {
     const navigate = useNavigate();
-    const [showProfile, setShowProfile] = useState(false);
-    const [showNotif, setShowNotif] = useState(false);
-
     const user = JSON.parse(localStorage.getItem('pms_user') || '{}');
-    const unreadCount = mockNotifications.filter(n => !n.read).length;
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    const fetchNotifications = useCallback(async () => {
+        try {
+            const res = await api.get('/api/notifications');
+            const notifications = res.data.notifications || [];
+            setUnreadCount(notifications.filter(n => !n.isRead).length);
+        } catch {
+            // silent fail on nav badge
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchNotifications();
+    }, [fetchNotifications]);
+
+    useRefreshOnChange(fetchNotifications);
 
     const handleLogout = () => {
         localStorage.removeItem('pms_token');
@@ -19,114 +34,71 @@ export default function TopNavbar({ onMenuClick }) {
     };
 
     return (
-        <header className="sticky top-0 z-30 bg-[#0c0e1a]/80 backdrop-blur-xl border-b border-white/5">
-            <div className="flex items-center justify-between h-16 px-4 lg:px-6">
-                {/* Left */}
-                <div className="flex items-center gap-4">
-                    <button onClick={onMenuClick} className="lg:hidden text-white/50 hover:text-white transition-colors">
-                        <HiMenu className="w-6 h-6" />
+        <div className="flex items-center justify-between h-16 px-6 bg-[#0a0c14]/80 backdrop-blur-xl border-b border-white/5">
+            {/* Left — Greeting */}
+            <div>
+                <p className="text-white/80 text-sm font-medium">Welcome, <span className="text-white">{user.name || 'User'}</span></p>
+            </div>
+
+            {/* Right — Notifications + Profile */}
+            <div className="flex items-center gap-4">
+                {/* Notification bell */}
+                <button
+                    onClick={() => navigate(user.role === 'student' ? '/student/notifications' : user.role === 'company' ? '/company/notifications' : '/admin/notifications')}
+                    className="relative p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+                    <HiBell className="w-5 h-5 text-white/60" />
+                    {unreadCount > 0 && (
+                        <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
+                            className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30">
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                        </motion.span>
+                    )}
+                </button>
+
+                {/* Profile dropdown */}
+                <div className="relative">
+                    <button onClick={() => setDropdownOpen(!dropdownOpen)}
+                        className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white font-bold text-sm">
+                            {(user.name || 'U')[0].toUpperCase()}
+                        </div>
+                        <div className="hidden sm:block text-left">
+                            <p className="text-white text-sm font-medium leading-tight">{user.name || 'User'}</p>
+                            <p className="text-white/30 text-[10px]">{user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}</p>
+                        </div>
+                        <HiChevronDown className={`w-4 h-4 text-white/30 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
                     </button>
-                    <div className="hidden sm:flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2 w-72">
-                        <HiSearch className="w-4 h-4 text-white/30" />
-                        <input
-                            type="text"
-                            placeholder="Search jobs, companies..."
-                            className="bg-transparent text-sm text-white placeholder-white/30 focus:outline-none w-full"
-                        />
-                    </div>
-                </div>
 
-                {/* Right */}
-                <div className="flex items-center gap-2">
-                    {/* Notifications */}
-                    <div className="relative">
-                        <button
-                            onClick={() => { setShowNotif(!showNotif); setShowProfile(false); }}
-                            className="relative p-2.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all"
-                        >
-                            <HiBell className="w-5 h-5" />
-                            {unreadCount > 0 && (
-                                <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center">
-                                    {unreadCount}
-                                </span>
-                            )}
-                        </button>
-
-                        <AnimatePresence>
-                            {showNotif && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                                    className="absolute right-0 top-12 w-80 bg-[#141627] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
-                                >
-                                    <div className="p-4 border-b border-white/5">
-                                        <h3 className="text-white font-semibold text-sm">Notifications</h3>
+                    <AnimatePresence>
+                        {dropdownOpen && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
+                                <motion.div initial={{ opacity: 0, y: 8, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                                    className="absolute right-0 top-full mt-2 w-48 bg-[#151825] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
+                                    <div className="p-3 border-b border-white/5">
+                                        <p className="text-white text-sm font-medium">{user.name || 'User'}</p>
+                                        <p className="text-white/30 text-xs">{user.email}</p>
                                     </div>
-                                    <div className="max-h-64 overflow-y-auto">
-                                        {mockNotifications.slice(0, 4).map(n => (
-                                            <div key={n.id} className={`px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer ${!n.read ? 'bg-primary-500/5' : ''}`}>
-                                                <p className="text-white/80 text-sm font-medium">{n.title}</p>
-                                                <p className="text-white/40 text-xs mt-0.5">{n.time}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <button
-                                        onClick={() => { navigate('/student/notifications'); setShowNotif(false); }}
-                                        className="w-full p-3 text-primary-400 text-sm font-medium hover:bg-white/5 transition-colors"
-                                    >
-                                        View All
-                                    </button>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-
-                    {/* Profile Dropdown */}
-                    <div className="relative">
-                        <button
-                            onClick={() => { setShowProfile(!showProfile); setShowNotif(false); }}
-                            className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-white/5 transition-all"
-                        >
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white font-bold text-sm">
-                                {(user.name || 'U')[0].toUpperCase()}
-                            </div>
-                            <div className="hidden md:block text-left">
-                                <p className="text-white/80 text-sm font-medium leading-none">{user.name || 'Student'}</p>
-                                <p className="text-white/30 text-[11px]">{user.role || 'student'}</p>
-                            </div>
-                            <HiChevronDown className="w-4 h-4 text-white/30 hidden md:block" />
-                        </button>
-
-                        <AnimatePresence>
-                            {showProfile && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                                    className="absolute right-0 top-12 w-48 bg-[#141627] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
-                                >
-                                    {[
-                                        { icon: HiUser, label: 'Profile', action: () => navigate('/student/profile') },
-                                        { icon: HiCog, label: 'Settings', action: () => navigate('/student/settings') },
-                                        { icon: HiLogout, label: 'Logout', action: handleLogout, danger: true },
-                                    ].map(({ icon: Icon, label, action, danger }, i) => (
-                                        <button
-                                            key={i}
-                                            onClick={() => { action(); setShowProfile(false); }}
-                                            className={`flex items-center gap-3 w-full px-4 py-2.5 text-sm transition-colors ${danger ? 'text-red-400 hover:bg-red-500/10' : 'text-white/60 hover:text-white hover:bg-white/5'
-                                                }`}
-                                        >
-                                            <Icon className="w-4 h-4" />
-                                            {label}
+                                    <div className="p-1.5">
+                                        <button onClick={() => { setDropdownOpen(false); navigate(user.role === 'student' ? '/student/profile' : '/profile'); }}
+                                            className="flex items-center gap-2.5 w-full px-3 py-2 text-white/60 text-sm hover:bg-white/5 rounded-lg transition-colors">
+                                            <HiUser className="w-4 h-4" /> View Profile
                                         </button>
-                                    ))}
+                                        <button onClick={() => { setDropdownOpen(false); navigate(user.role === 'student' ? '/student/profile' : '/settings'); }}
+                                            className="flex items-center gap-2.5 w-full px-3 py-2 text-white/60 text-sm hover:bg-white/5 rounded-lg transition-colors">
+                                            <HiCog className="w-4 h-4" /> Settings
+                                        </button>
+                                        <button onClick={handleLogout}
+                                            className="flex items-center gap-2.5 w-full px-3 py-2 text-red-400 text-sm hover:bg-red-500/10 rounded-lg transition-colors">
+                                            <HiLogout className="w-4 h-4" /> Sign Out
+                                        </button>
+                                    </div>
                                 </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
+                            </>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
-        </header>
+        </div>
     );
 }

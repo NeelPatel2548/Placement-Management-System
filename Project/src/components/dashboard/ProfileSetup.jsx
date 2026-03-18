@@ -1,8 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { HiUser, HiAcademicCap, HiBriefcase, HiDocumentText, HiCheck, HiArrowRight, HiArrowLeft } from 'react-icons/hi';
-import { skillOptions } from './mockData';
+import { Loader2 } from 'lucide-react';
+import api from '../../services/api';
+
+const skillOptions = [
+    'React', 'Angular', 'Vue.js', 'Node.js', 'Express.js', 'MongoDB', 'PostgreSQL', 'MySQL',
+    'Python', 'Java', 'C++', 'JavaScript', 'TypeScript', 'Go', 'Rust',
+    'AWS', 'Azure', 'GCP', 'Docker', 'Kubernetes',
+    'Machine Learning', 'Data Science', 'Deep Learning',
+    'HTML', 'CSS', 'Tailwind CSS', 'Bootstrap',
+    'Git', 'Linux', 'REST API', 'GraphQL',
+];
 
 const steps = [
     { icon: HiUser, label: 'Personal' },
@@ -13,8 +23,17 @@ const steps = [
 
 export default function ProfileSetup() {
     const navigate = useNavigate();
+    const fileInputRef = useRef(null);
     const [step, setStep] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [pageLoading, setPageLoading] = useState(true);
+    const [isUpdate, setIsUpdate] = useState(false);
+    const [successMsg, setSuccessMsg] = useState('');
+    const [errorMsg, setErrorMsg] = useState('');
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [uploading, setUploading] = useState(false);
+    const [resumeFile, setResumeFile] = useState(null);
+    const [resumeInfo, setResumeInfo] = useState(null);
 
     const [form, setForm] = useState({
         phone: '', dob: '', gender: '', address: '', enrollmentNo: '', branch: '',
@@ -22,6 +41,46 @@ export default function ProfileSetup() {
         backlogs: false, skills: [], projects: '', certifications: '', internshipExperience: '',
         linkedin: '', github: '',
     });
+
+    // Pre-fill from existing profile
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const res = await api.get('/api/student/profile');
+                const student = res.data.student;
+                if (student) {
+                    setIsUpdate(true);
+                    setForm({
+                        phone: student.phone || '',
+                        dob: student.dob ? new Date(student.dob).toISOString().split('T')[0] : '',
+                        gender: student.gender || '',
+                        address: student.address || '',
+                        enrollmentNo: student.enrollmentNo || '',
+                        branch: student.branch || '',
+                        tenthPercentage: student.tenthPercentage || '',
+                        twelfthPercentage: student.twelfthPercentage || '',
+                        cgpa: student.cgpa || '',
+                        currentSemester: student.currentSemester || '',
+                        backlogs: student.backlogs || false,
+                        skills: student.skills || [],
+                        projects: student.projects?.join(', ') || '',
+                        certifications: student.certifications?.join(', ') || '',
+                        internshipExperience: student.internshipExperience || '',
+                        linkedin: student.linkedin || '',
+                        github: student.github || '',
+                    });
+                    if (student.resumeId) {
+                        setResumeInfo(student.resumeId);
+                    }
+                }
+            } catch {
+                // No existing profile — first-time setup
+            } finally {
+                setPageLoading(false);
+            }
+        };
+        fetchProfile();
+    }, []);
 
     const update = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }));
     const toggleBool = (field) => () => setForm(f => ({ ...f, [field]: !f[field] }));
@@ -35,21 +94,79 @@ export default function ProfileSetup() {
         }));
     };
 
+    const handleResumeUpload = async (file) => {
+        if (!file) return;
+        setUploading(true);
+        setUploadProgress(0);
+        setErrorMsg('');
+
+        const formData = new FormData();
+        formData.append('resume', file);
+
+        try {
+            const res = await api.post('/api/student/resume', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                onUploadProgress: (e) => {
+                    const percent = Math.round((e.loaded * 100) / e.total);
+                    setUploadProgress(percent);
+                },
+            });
+            setResumeInfo(res.data.resume);
+            setResumeFile(null);
+            setSuccessMsg('Resume uploaded successfully!');
+            setTimeout(() => setSuccessMsg(''), 3000);
+        } catch (err) {
+            setErrorMsg(err.response?.data?.message || 'Resume upload failed');
+        } finally {
+            setUploading(false);
+            setUploadProgress(0);
+        }
+    };
+
     const handleSubmit = async () => {
         setLoading(true);
-        // Mock save — will connect to backend later
-        await new Promise(r => setTimeout(r, 1500));
-        const user = JSON.parse(localStorage.getItem('pms_user') || '{}');
-        user.profileCompleted = true;
-        localStorage.setItem('pms_user', JSON.stringify(user));
-        setLoading(false);
-        navigate('/student');
+        setErrorMsg('');
+        try {
+            const payload = {
+                ...form,
+                tenthPercentage: form.tenthPercentage ? Number(form.tenthPercentage) : undefined,
+                twelfthPercentage: form.twelfthPercentage ? Number(form.twelfthPercentage) : undefined,
+                cgpa: form.cgpa ? Number(form.cgpa) : undefined,
+                currentSemester: form.currentSemester ? Number(form.currentSemester) : undefined,
+                projects: form.projects ? form.projects.split(',').map(p => p.trim()).filter(Boolean) : [],
+                certifications: form.certifications ? form.certifications.split(',').map(c => c.trim()).filter(Boolean) : [],
+            };
+
+            if (isUpdate) {
+                await api.put('/api/student/profile', payload);
+            } else {
+                await api.post('/api/student/profile/setup', payload);
+            }
+
+            const user = JSON.parse(localStorage.getItem('pms_user') || '{}');
+            user.profileCompleted = true;
+            localStorage.setItem('pms_user', JSON.stringify(user));
+
+            setSuccessMsg('Profile saved successfully!');
+            setTimeout(() => navigate('/student'), 1500);
+        } catch (err) {
+            setErrorMsg(err.response?.data?.message || 'Failed to save profile');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const inputClass = 'w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:border-primary-400/60 focus:ring-2 focus:ring-primary-400/20 transition-all';
     const labelClass = 'block text-white/60 text-sm font-medium mb-1.5';
-
     const delay = (d) => ({ initial: { opacity: 0, y: 15 }, animate: { opacity: 1, y: 0 }, transition: { delay: d } });
+
+    if (pageLoading) {
+        return (
+            <div className="min-h-screen bg-[#080a12] flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-[#080a12] flex items-center justify-center p-4">
@@ -57,8 +174,8 @@ export default function ProfileSetup() {
                 {/* Header */}
                 <motion.div {...delay(0)} className="text-center mb-8">
                     <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center mx-auto mb-4 text-white font-bold text-xl">P</div>
-                    <h1 className="text-2xl font-bold text-white">Complete Your Profile</h1>
-                    <p className="text-white/40 text-sm mt-1">Fill in your details to access the placement portal</p>
+                    <h1 className="text-2xl font-bold text-white">{isUpdate ? 'Update Your Profile' : 'Complete Your Profile'}</h1>
+                    <p className="text-white/40 text-sm mt-1">{isUpdate ? 'Edit your details below' : 'Fill in your details to access the placement portal'}</p>
                 </motion.div>
 
                 {/* Step indicator */}
@@ -76,6 +193,18 @@ export default function ProfileSetup() {
                         </div>
                     ))}
                 </motion.div>
+
+                {/* Success/Error messages */}
+                {successMsg && (
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-4 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 text-sm text-center">
+                        {successMsg}
+                    </motion.div>
+                )}
+                {errorMsg && (
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-4 p-3 rounded-xl bg-red-500/15 border border-red-500/20 text-red-400 text-sm text-center">
+                        {errorMsg}
+                    </motion.div>
+                )}
 
                 {/* Card */}
                 <motion.div {...delay(0.15)} className="bg-[#0f1120] border border-white/5 rounded-2xl p-6 lg:p-8">
@@ -159,22 +288,68 @@ export default function ProfileSetup() {
                     {step === 3 && (
                         <div className="space-y-6">
                             <h2 className="text-lg font-semibold text-white mb-4">Documents</h2>
-                            <div className="border-2 border-dashed border-white/10 rounded-2xl p-8 text-center hover:border-primary-400/30 transition-colors cursor-pointer">
+                            <div
+                                className="border-2 border-dashed border-white/10 rounded-2xl p-8 text-center hover:border-primary-400/30 transition-colors cursor-pointer"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
                                 <HiDocumentText className="w-12 h-12 text-white/20 mx-auto mb-3" />
                                 <p className="text-white/60 text-sm font-medium">Upload your Resume (PDF)</p>
-                                <p className="text-white/30 text-xs mt-1">Drag and drop or click to browse</p>
-                                <input type="file" accept=".pdf" className="hidden" />
-                                <button type="button" className="mt-4 px-4 py-2 bg-primary-500/20 text-primary-400 rounded-xl text-sm font-medium hover:bg-primary-500/30 transition-colors">
-                                    Choose File
-                                </button>
+                                <p className="text-white/30 text-xs mt-1">
+                                    {resumeFile ? resumeFile.name : 'Click to browse'}
+                                </p>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept=".pdf"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) {
+                                            setResumeFile(file);
+                                            handleResumeUpload(file);
+                                        }
+                                    }}
+                                />
+                                {!uploading && (
+                                    <button type="button" className="mt-4 px-4 py-2 bg-primary-500/20 text-primary-400 rounded-xl text-sm font-medium hover:bg-primary-500/30 transition-colors">
+                                        Choose File
+                                    </button>
+                                )}
                             </div>
-                            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex items-start gap-3">
-                                <HiCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                                <div>
-                                    <p className="text-emerald-300 text-sm font-medium">Almost there!</p>
-                                    <p className="text-white/40 text-xs mt-0.5">Upload your resume and click "Complete Setup" to access the dashboard.</p>
+
+                            {/* Upload progress bar */}
+                            {uploading && (
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-white/50">Uploading...</span>
+                                        <span className="text-primary-400 font-semibold">{uploadProgress}%</span>
+                                    </div>
+                                    <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                                        <div className="h-full bg-gradient-to-r from-primary-500 to-accent-500 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                                    </div>
                                 </div>
-                            </div>
+                            )}
+
+                            {/* Current resume info */}
+                            {resumeInfo && (
+                                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex items-start gap-3">
+                                    <HiCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="text-emerald-300 text-sm font-medium">Resume uploaded</p>
+                                        <p className="text-white/40 text-xs mt-0.5">Version: {resumeInfo.version || 'Latest'}</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {!resumeInfo && !uploading && (
+                                <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3">
+                                    <HiDocumentText className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="text-amber-300 text-sm font-medium">Almost there!</p>
+                                        <p className="text-white/40 text-xs mt-0.5">Upload your resume and click "Complete Setup" to access the dashboard.</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -191,11 +366,11 @@ export default function ProfileSetup() {
                                 Next <HiArrowRight className="w-4 h-4" />
                             </button>
                         ) : (
-                            <button onClick={handleSubmit} disabled={loading} className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-medium shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-60">
+                            <button onClick={handleSubmit} disabled={loading || uploading} className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-medium shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-60">
                                 {loading ? (
-                                    <><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg> Saving...</>
+                                    <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
                                 ) : (
-                                    <><HiCheck className="w-4 h-4" /> Complete Setup</>
+                                    <><HiCheck className="w-4 h-4" /> {isUpdate ? 'Save Changes' : 'Complete Setup'}</>
                                 )}
                             </button>
                         )}

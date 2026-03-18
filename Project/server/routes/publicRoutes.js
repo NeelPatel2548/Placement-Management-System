@@ -5,11 +5,16 @@ import {
     getApplications, updateApplication,
     getInterviews, getMessages,
     getNotifications, getPlacementReports, getResumes,
+    getPublicStats, getTopCompanies,
 } from '../controllers/publicController.js';
 
 const router = express.Router();
 
-// All routes are protected (require JWT)
+// Public routes (no JWT required)
+router.get('/public/stats', getPublicStats);
+router.get('/public/companies', getTopCompanies);
+
+// All routes below are protected (require JWT)
 router.use(protect);
 
 // Companies

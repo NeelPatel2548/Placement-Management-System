@@ -9,7 +9,7 @@ import Notification from '../models/Notification.js';
 // ─── GET /api/company/profile ───
 export const getProfile = async (req, res) => {
     try {
-        const company = await Company.findOne({ userId: req.user._id });
+        const company = await Company.findOne({ userId: req.user.id });
         if (!company) {
             return res.status(404).json({ success: false, message: 'Company profile not found' });
         }
@@ -18,7 +18,7 @@ export const getProfile = async (req, res) => {
             success: true,
             company,
             user: {
-                id: req.user._id,
+                id: req.user.id,
                 name: req.user.name,
                 email: req.user.email,
             },
@@ -38,15 +38,15 @@ export const updateProfile = async (req, res) => {
             if (req.body[field] !== undefined) updates[field] = req.body[field];
         }
 
-        let company = await Company.findOne({ userId: req.user._id });
+        let company = await Company.findOne({ userId: req.user.id });
         if (!company) {
-            company = await Company.create({ userId: req.user._id, companyName: req.user.name, ...updates });
-            await User.findByIdAndUpdate(req.user._id, { profileCompleted: true });
+            company = await Company.create({ userId: req.user.id, companyName: req.user.name, ...updates });
+            await User.findByIdAndUpdate(req.user.id, { profileCompleted: true });
         } else {
             company = await Company.findOneAndUpdate(
-                { userId: req.user._id },
+                { userId: req.user.id },
                 { $set: updates },
-                { new: true, runValidators: true }
+                { returnDocument: 'after', runValidators: true }
             );
         }
 
@@ -60,12 +60,12 @@ export const updateProfile = async (req, res) => {
 // ─── GET /api/company/dashboard ───
 export const getDashboard = async (req, res) => {
     try {
-        const company = await Company.findOne({ userId: req.user._id });
+        const company = await Company.findOne({ userId: req.user.id });
         if (!company) {
             return res.json({
                 success: true,
                 stats: { activeJobs: 0, totalApplicants: 0, interviews: 0, selected: 0 },
-                user: { id: req.user._id, name: req.user.name, email: req.user.email },
+                user: { id: req.user.id, name: req.user.name, email: req.user.email },
             });
         }
 
@@ -81,7 +81,7 @@ export const getDashboard = async (req, res) => {
         res.json({
             success: true,
             stats: { activeJobs, totalApplicants, interviews, selected },
-            user: { id: req.user._id, name: req.user.name, email: req.user.email },
+            user: { id: req.user.id, name: req.user.name, email: req.user.email },
             isApproved: company.isApproved,
         });
     } catch (error) {
@@ -93,7 +93,7 @@ export const getDashboard = async (req, res) => {
 // ─── POST /api/company/jobs ───
 export const postJob = async (req, res) => {
     try {
-        const company = await Company.findOne({ userId: req.user._id });
+        const company = await Company.findOne({ userId: req.user.id });
         if (!company) {
             return res.status(400).json({ success: false, message: 'Create your company profile first' });
         }
@@ -145,7 +145,7 @@ export const postJob = async (req, res) => {
 // ─── GET /api/company/jobs ───
 export const getJobs = async (req, res) => {
     try {
-        const company = await Company.findOne({ userId: req.user._id });
+        const company = await Company.findOne({ userId: req.user.id });
         if (!company) {
             return res.json({ success: true, jobs: [] });
         }
@@ -171,7 +171,7 @@ export const getJobs = async (req, res) => {
 // ─── GET /api/company/jobs/:jobId/applicants ───
 export const getApplicants = async (req, res) => {
     try {
-        const company = await Company.findOne({ userId: req.user._id });
+        const company = await Company.findOne({ userId: req.user.id });
         if (!company) {
             return res.status(403).json({ success: false, message: 'Company not found' });
         }
@@ -341,6 +341,68 @@ export const uploadResults = async (req, res) => {
         res.json({ success: true, message: 'Results uploaded' });
     } catch (error) {
         console.error('❌ Upload results error:', error.message);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+// ─── GET /api/company/applications ───
+export const getCompanyApplications = async (req, res) => {
+    try {
+        const company = await Company.findOne({ userId: req.user.id });
+        if (!company) {
+            return res.status(404).json({ success: false, message: 'Company not found' });
+        }
+
+        const jobs = await Job.find({ companyId: company._id }).select('_id title package');
+        const jobIds = jobs.map(j => j._id);
+
+        const applications = await Application.find({ jobId: { $in: jobIds } })
+            .populate({
+                path: 'studentId',
+                select: 'enrollmentNo cgpa branch phone userId skills',
+                populate: { path: 'userId', select: 'name email' },
+            })
+            .populate('jobId', 'title package location')
+            .populate('interviewId')
+            .sort({ createdAt: -1 });
+
+        res.json({ success: true, applications });
+    } catch (error) {
+        console.error('❌ Get company applications error:', error.message);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+// ─── GET /api/company/interviews ───
+export const getCompanyInterviews = async (req, res) => {
+    try {
+        const company = await Company.findOne({ userId: req.user.id });
+        if (!company) {
+            return res.status(404).json({ success: false, message: 'Company not found' });
+        }
+
+        const jobs = await Job.find({ companyId: company._id }).select('_id');
+        const jobIds = jobs.map(j => j._id);
+
+        const appIds = await Application.find({ jobId: { $in: jobIds } }).distinct('_id');
+
+        const interviews = await Interview.find({ applicationId: { $in: appIds } })
+            .populate({
+                path: 'applicationId',
+                populate: [
+                    {
+                        path: 'studentId',
+                        select: 'enrollmentNo cgpa branch userId',
+                        populate: { path: 'userId', select: 'name email' },
+                    },
+                    { path: 'jobId', select: 'title package' },
+                ],
+            })
+            .sort({ scheduledDate: 1, interviewDate: 1 });
+
+        res.json({ success: true, interviews });
+    } catch (error) {
+        console.error('❌ Get company interviews error:', error.message);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 };

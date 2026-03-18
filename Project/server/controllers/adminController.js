@@ -26,7 +26,7 @@ export const getDashboard = async (req, res) => {
                 pendingCompanies,
                 totalApplications,
             },
-            user: { id: req.user._id, name: req.user.name, email: req.user.email },
+            user: { id: req.user.id, name: req.user.name, email: req.user.email },
         });
     } catch (error) {
         console.error('❌ Admin dashboard error:', error.message);
@@ -54,7 +54,7 @@ export const approveCompany = async (req, res) => {
         const company = await Company.findByIdAndUpdate(
             req.params.companyId,
             { isApproved: true },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!company) {
@@ -82,7 +82,7 @@ export const rejectCompany = async (req, res) => {
         const company = await Company.findByIdAndUpdate(
             req.params.companyId,
             { isApproved: false },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!company) {

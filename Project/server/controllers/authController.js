@@ -70,7 +70,7 @@ export const register = async (req, res) => {
         // Send OTP email
         await sendOTPEmail(email, name, otp, 'verify');
 
-        console.log(`📧 OTP sent to ${email}: ${otp}`);
+
 
         res.status(201).json({
             success: true,
@@ -141,7 +141,7 @@ export const verifyOTP = async (req, res) => {
             { expiresIn: '24h' }
         );
 
-        console.log(`✅ OTP verified for ${email}`);
+
 
         res.json({
             success: true,
@@ -197,7 +197,7 @@ export const resendOTP = async (req, res) => {
         // Send OTP email
         await sendOTPEmail(email, user.name, otp, 'verify');
 
-        console.log(`📧 OTP resent to ${email}: ${otp}`);
+
 
         res.json({
             success: true,
@@ -266,7 +266,7 @@ export const login = async (req, res) => {
         // Send OTP via email
         await sendOTPEmail(email, user.name, otp, 'login');
 
-        console.log(`📧 Login OTP sent to ${email}: ${otp}`);
+
 
         res.json({
             success: true,
@@ -330,7 +330,7 @@ export const loginVerify = async (req, res) => {
             { expiresIn: '24h' }
         );
 
-        console.log(`✅ User logged in: ${email}`);
+
 
         res.json({
             success: true,
@@ -387,7 +387,7 @@ export const forgotPassword = async (req, res) => {
         // Send password reset email
         await sendPasswordResetOTPEmail(email, user.name, otp);
 
-        console.log(`📧 Password reset OTP sent to ${email}: ${otp}`);
+
 
         res.json({
             success: true,
@@ -454,7 +454,7 @@ export const verifyResetOTP = async (req, res) => {
         user.resetOtpExpiry = undefined;
         await user.save();
 
-        console.log(`✅ Reset OTP verified for ${email}`);
+
 
         res.json({
             success: true,
@@ -527,7 +527,7 @@ export const resetPassword = async (req, res) => {
             type: 'security',
         });
 
-        console.log(`🔐 Password reset for ${email}`);
+
 
         res.json({
             success: true,
@@ -565,7 +565,7 @@ export const changePassword = async (req, res) => {
         }
 
         // Fetch user with password
-        const user = await User.findById(req.user._id);
+        const user = await User.findById(req.user.id);
         if (!user) {
             return res.status(404).json({
                 success: false,
@@ -598,7 +598,7 @@ export const changePassword = async (req, res) => {
             type: 'security',
         });
 
-        console.log(`🔐 Password changed for ${user.email}`);
+
 
         res.json({
             success: true,

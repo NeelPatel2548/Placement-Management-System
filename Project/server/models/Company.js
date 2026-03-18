@@ -12,6 +12,7 @@ const companySchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
             sparse: true,
+            unique: true,
         },
         name: {
             type: String,
@@ -80,9 +81,6 @@ const companySchema = new mongoose.Schema(
         timestamps: true,
     }
 );
-
-companySchema.index({ userId: 1 });
-companySchema.index({ companyId: 1 });
 
 const Company = mongoose.model('Company', companySchema);
 

@@ -107,7 +107,6 @@ const studentSchema = new mongoose.Schema(
     }
 );
 
-studentSchema.index({ userId: 1 });
 
 const Student = mongoose.model('Student', studentSchema);
 

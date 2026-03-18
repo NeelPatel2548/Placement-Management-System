@@ -1,24 +1,14 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 
-const companies = [
-    { name: 'Google', color: '#4285F4' },
-    { name: 'Microsoft', color: '#00A4EF' },
-    { name: 'Amazon', color: '#FF9900' },
-    { name: 'Apple', color: '#555555' },
-    { name: 'Meta', color: '#1877F2' },
-    { name: 'Netflix', color: '#E50914' },
-    { name: 'Adobe', color: '#FF0000' },
-    { name: 'Salesforce', color: '#00A1E0' },
-    { name: 'Oracle', color: '#F80000' },
-    { name: 'IBM', color: '#0F62FE' },
-    { name: 'Deloitte', color: '#86BC25' },
-    { name: 'Infosys', color: '#007CC3' },
-    { name: 'TCS', color: '#2B6CB0' },
-    { name: 'Wipro', color: '#3A1078' },
-    { name: 'Accenture', color: '#A100FF' },
-    { name: 'Capgemini', color: '#0070AD' },
-];
+// Generate a consistent color from a string
+function stringToColor(str) {
+    const colors = ['#4285F4', '#00A4EF', '#FF9900', '#E50914', '#1877F2', '#86BC25', '#007CC3', '#A100FF', '#0070AD', '#F80000', '#3A1078', '#0F62FE'];
+    let hash = 0;
+    for (let i = 0; i < (str || '').length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    return colors[Math.abs(hash) % colors.length];
+}
 
 function CompanyLogo({ name, color }) {
     return (
@@ -28,7 +18,7 @@ function CompanyLogo({ name, color }) {
                     className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-sm group-hover:scale-110 transition-transform"
                     style={{ backgroundColor: color }}
                 >
-                    {name[0]}
+                    {(name || '?')[0].toUpperCase()}
                 </div>
                 <span className="font-semibold text-gray-700 text-sm">{name}</span>
             </div>
@@ -38,6 +28,29 @@ function CompanyLogo({ name, color }) {
 
 export default function TopRecruiters() {
     const [ref, inView] = useInView({ threshold: 0.1, triggerOnce: true });
+    const [companies, setCompanies] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/public/companies`)
+            .then(r => r.json())
+            .then(d => {
+                if (d.success && d.companies) {
+                    setCompanies(d.companies.map(c => ({
+                        name: c.companyName || c.name || 'Company',
+                        industry: c.industry || '',
+                        location: c.location || '',
+                        website: c.website || '',
+                        color: stringToColor(c.companyName || c.name || ''),
+                    })));
+                }
+            })
+            .catch(() => { /* show empty state */ })
+            .finally(() => setLoading(false));
+    }, []);
+
+    const row1 = companies.slice(0, Math.ceil(companies.length / 2));
+    const row2 = companies.slice(Math.ceil(companies.length / 2));
 
     return (
         <section id="recruiters" className="py-24 lg:py-32 bg-gray-50 relative overflow-hidden">
@@ -62,27 +75,43 @@ export default function TopRecruiters() {
                 </motion.div>
             </div>
 
-            {/* Marquee Row 1 */}
-            <div className="relative mb-6">
-                <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-gray-50 to-transparent z-10" />
-                <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-gray-50 to-transparent z-10" />
-                <div className="flex animate-marquee">
-                    {[...companies.slice(0, 8), ...companies.slice(0, 8)].map((c, i) => (
-                        <CompanyLogo key={i} name={c.name} color={c.color} />
-                    ))}
+            {loading ? (
+                <div className="flex items-center justify-center py-16">
+                    <div className="w-8 h-8 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
                 </div>
-            </div>
+            ) : companies.length === 0 ? (
+                <div className="text-center py-16">
+                    <p className="text-gray-400 text-sm">Recruiting companies will appear here once approved.</p>
+                </div>
+            ) : (
+                <>
+                    {/* Marquee Row 1 */}
+                    {row1.length > 0 && (
+                        <div className="relative mb-6">
+                            <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-gray-50 to-transparent z-10" />
+                            <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-gray-50 to-transparent z-10" />
+                            <div className="flex animate-marquee">
+                                {[...row1, ...row1, ...row1].map((c, i) => (
+                                    <CompanyLogo key={i} name={c.name} color={c.color} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
-            {/* Marquee Row 2 (reverse) */}
-            <div className="relative">
-                <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-gray-50 to-transparent z-10" />
-                <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-gray-50 to-transparent z-10" />
-                <div className="flex animate-marquee" style={{ animationDirection: 'reverse', animationDuration: '35s' }}>
-                    {[...companies.slice(8), ...companies.slice(8)].map((c, i) => (
-                        <CompanyLogo key={i} name={c.name} color={c.color} />
-                    ))}
-                </div>
-            </div>
+                    {/* Marquee Row 2 (reverse) */}
+                    {row2.length > 0 && (
+                        <div className="relative">
+                            <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-gray-50 to-transparent z-10" />
+                            <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-gray-50 to-transparent z-10" />
+                            <div className="flex animate-marquee" style={{ animationDirection: 'reverse', animationDuration: '35s' }}>
+                                {[...row2, ...row2, ...row2].map((c, i) => (
+                                    <CompanyLogo key={i} name={c.name} color={c.color} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </>
+            )}
         </section>
     );
 }

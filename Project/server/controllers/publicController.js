@@ -6,6 +6,7 @@ import Message from '../models/Message.js';
 import Notification from '../models/Notification.js';
 import PlacementReport from '../models/PlacementReport.js';
 import Resume from '../models/Resume.js';
+import Student from '../models/Student.js';
 
 // ─── GET /api/companies ───
 export const getCompanies = async (req, res) => {
@@ -96,7 +97,7 @@ export const updateApplication = async (req, res) => {
         const application = await Application.findByIdAndUpdate(
             req.params.id,
             { $set: updates },
-            { new: true, runValidators: true }
+            { returnDocument: 'after', runValidators: true }
         );
 
         if (!application) {
@@ -161,6 +162,51 @@ export const getResumes = async (req, res) => {
         res.json({ success: true, resumes });
     } catch (error) {
         console.error('❌ Get resumes error:', error.message);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+// ─── GET /api/public/stats (no auth) ───
+export const getPublicStats = async (req, res) => {
+    try {
+        const [totalStudents, totalCompanies, totalJobs, placementAgg, topCompanies] = await Promise.all([
+            Student.countDocuments(),
+            Company.countDocuments({ isApproved: true }),
+            Job.countDocuments({ status: 'open' }),
+            PlacementReport.aggregate([
+                { $group: { _id: null, total: { $sum: '$placedStudents' } } },
+            ]),
+            Company.find({ isApproved: true })
+                .select('name industry website logo')
+                .sort({ createdAt: -1 })
+                .limit(12),
+        ]);
+
+        res.json({
+            success: true,
+            totalStudents,
+            totalCompanies,
+            totalPlacements: placementAgg.length > 0 ? placementAgg[0].total : 0,
+            totalJobs,
+            topCompanies,
+        });
+    } catch (error) {
+        console.error('❌ Public stats error:', error.message);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+// ─── GET /api/public/companies (no auth) ───
+export const getTopCompanies = async (req, res) => {
+    try {
+        const companies = await Company.find({ isApproved: true })
+            .select('name companyName industry website location logo')
+            .sort({ createdAt: -1 })
+            .limit(6);
+
+        res.json({ success: true, companies });
+    } catch (error) {
+        console.error('❌ Top companies error:', error.message);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 };

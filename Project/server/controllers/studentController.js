@@ -10,7 +10,7 @@ import Message from '../models/Message.js';
 // ─── POST /api/student/profile/setup ───
 export const setupProfile = async (req, res) => {
     try {
-        const userId = req.user._id;
+        const userId = req.user.id;
 
         const existing = await Student.findOne({ userId });
         if (existing) {
@@ -45,7 +45,7 @@ export const setupProfile = async (req, res) => {
 // ─── GET /api/student/profile ───
 export const getProfile = async (req, res) => {
     try {
-        const student = await Student.findOne({ userId: req.user._id }).populate('resumeId');
+        const student = await Student.findOne({ userId: req.user.id }).populate('resumeId');
         if (!student) {
             return res.status(404).json({ success: false, message: 'Student profile not found' });
         }
@@ -54,7 +54,7 @@ export const getProfile = async (req, res) => {
             success: true,
             student,
             user: {
-                id: req.user._id,
+                id: req.user.id,
                 name: req.user.name,
                 email: req.user.email,
                 role: req.user.role,
@@ -85,9 +85,9 @@ export const updateProfile = async (req, res) => {
         }
 
         const student = await Student.findOneAndUpdate(
-            { userId: req.user._id },
+            { userId: req.user.id },
             { $set: updates },
-            { new: true, runValidators: true }
+            { returnDocument: 'after', runValidators: true }
         );
 
         if (!student) {
@@ -104,7 +104,7 @@ export const updateProfile = async (req, res) => {
 // ─── GET /api/student/dashboard ───
 export const getDashboard = async (req, res) => {
     try {
-        const student = await Student.findOne({ userId: req.user._id });
+        const student = await Student.findOne({ userId: req.user.id });
 
         const jobsCount = await Job.countDocuments({ status: 'open' });
         const applicationsCount = student ? await Application.countDocuments({ studentId: student._id }) : 0;
@@ -116,12 +116,12 @@ export const getDashboard = async (req, res) => {
             : 0;
         const offersCount = student ? await Application.countDocuments({ studentId: student._id, status: 'selected' }) : 0;
 
-        const unreadNotifications = await Notification.countDocuments({ userId: req.user._id, isRead: false });
+        const unreadNotifications = await Notification.countDocuments({ userId: req.user.id, isRead: false });
 
         res.json({
             success: true,
             user: {
-                id: req.user._id,
+                id: req.user.id,
                 name: req.user.name,
                 email: req.user.email,
                 role: req.user.role,
@@ -145,7 +145,7 @@ export const getDashboard = async (req, res) => {
 // ─── GET /api/student/jobs ───
 export const getEligibleJobs = async (req, res) => {
     try {
-        const student = await Student.findOne({ userId: req.user._id });
+        const student = await Student.findOne({ userId: req.user.id });
 
         let query = { status: 'open' };
         if (student) {
@@ -170,7 +170,7 @@ export const getEligibleJobs = async (req, res) => {
 // ─── POST /api/student/jobs/:jobId/apply ───
 export const applyToJob = async (req, res) => {
     try {
-        const student = await Student.findOne({ userId: req.user._id });
+        const student = await Student.findOne({ userId: req.user.id });
         if (!student) {
             return res.status(400).json({ success: false, message: 'Complete your profile first' });
         }
@@ -210,7 +210,7 @@ export const applyToJob = async (req, res) => {
 
         // Create notification
         await Notification.create({
-            userId: req.user._id,
+            userId: req.user.id,
             title: 'Application Submitted',
             message: `Your application for ${job.title} has been submitted successfully.`,
             type: 'job',
@@ -229,7 +229,7 @@ export const applyToJob = async (req, res) => {
 // ─── GET /api/student/applications ───
 export const getApplications = async (req, res) => {
     try {
-        const student = await Student.findOne({ userId: req.user._id });
+        const student = await Student.findOne({ userId: req.user.id });
         if (!student) {
             return res.json({ success: true, applications: [] });
         }
@@ -253,7 +253,7 @@ export const getApplications = async (req, res) => {
 // ─── GET /api/student/interviews ───
 export const getInterviews = async (req, res) => {
     try {
-        const student = await Student.findOne({ userId: req.user._id });
+        const student = await Student.findOne({ userId: req.user.id });
         if (!student) {
             return res.json({ success: true, interviews: [] });
         }
@@ -286,7 +286,7 @@ export const uploadResumeHandler = async (req, res) => {
             return res.status(400).json({ success: false, message: 'No file uploaded' });
         }
 
-        const student = await Student.findOne({ userId: req.user._id });
+        const student = await Student.findOne({ userId: req.user.id });
         if (!student) {
             return res.status(400).json({ success: false, message: 'Complete your profile first' });
         }
@@ -310,7 +310,7 @@ export const uploadResumeHandler = async (req, res) => {
 // ─── GET /api/student/notifications ───
 export const getNotifications = async (req, res) => {
     try {
-        const notifications = await Notification.find({ userId: req.user._id })
+        const notifications = await Notification.find({ userId: req.user.id })
             .sort({ createdAt: -1 })
             .limit(50);
 
@@ -325,9 +325,9 @@ export const getNotifications = async (req, res) => {
 export const markNotificationRead = async (req, res) => {
     try {
         const notification = await Notification.findOneAndUpdate(
-            { _id: req.params.id, userId: req.user._id },
+            { _id: req.params.id, userId: req.user.id },
             { isRead: true },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!notification) {
@@ -344,7 +344,7 @@ export const markNotificationRead = async (req, res) => {
 // ─── GET /api/student/analytics ───
 export const getAnalytics = async (req, res) => {
     try {
-        const student = await Student.findOne({ userId: req.user._id });
+        const student = await Student.findOne({ userId: req.user.id });
         if (!student) {
             return res.json({ success: true, analytics: { applicationsVsInterviews: [], placementProgress: [] } });
         }
@@ -388,7 +388,7 @@ export const sendMessage = async (req, res) => {
         }
 
         const message = await Message.create({
-            senderId: req.user._id,
+            senderId: req.user.id,
             receiverId: admins[0]._id,
             subject: subject || 'General Query',
             content,
@@ -405,7 +405,7 @@ export const sendMessage = async (req, res) => {
 export const getMessages = async (req, res) => {
     try {
         const messages = await Message.find({
-            $or: [{ senderId: req.user._id }, { receiverId: req.user._id }],
+            $or: [{ senderId: req.user.id }, { receiverId: req.user.id }],
         })
             .populate('senderId', 'name email role')
             .populate('receiverId', 'name email role')

@@ -1,17 +1,37 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import CountUp from 'react-countup';
 import { HiUsers, HiOfficeBuilding, HiBriefcase, HiTrendingUp } from 'react-icons/hi';
 
-const stats = [
-    { icon: HiUsers, value: 10000, suffix: '+', label: 'Students Registered', gradient: 'from-blue-500 to-cyan-400' },
-    { icon: HiOfficeBuilding, value: 500, suffix: '+', label: 'Companies Hiring', gradient: 'from-purple-500 to-pink-400' },
-    { icon: HiBriefcase, value: 2500, suffix: '+', label: 'Jobs Posted', gradient: 'from-orange-500 to-amber-400' },
-    { icon: HiTrendingUp, value: 95, suffix: '%', label: 'Placement Rate', gradient: 'from-emerald-500 to-teal-400' },
-];
-
 export default function Statistics() {
     const [ref, inView] = useInView({ threshold: 0.3, triggerOnce: true });
+    const [data, setData] = useState({ totalStudents: 0, totalCompanies: 0, totalJobs: 0, totalPlacements: 0 });
+    const [loaded, setLoaded] = useState(false);
+
+    useEffect(() => {
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/public/stats`)
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    setData({
+                        totalStudents: d.totalStudents || 0,
+                        totalCompanies: d.totalCompanies || 0,
+                        totalJobs: d.totalJobs || 0,
+                        totalPlacements: d.totalPlacements || 0,
+                    });
+                }
+            })
+            .catch(() => { /* show zeros on error */ })
+            .finally(() => setLoaded(true));
+    }, []);
+
+    const stats = [
+        { icon: HiUsers, value: data.totalStudents, suffix: '+', label: 'Students Registered', gradient: 'from-blue-500 to-cyan-400' },
+        { icon: HiOfficeBuilding, value: data.totalCompanies, suffix: '+', label: 'Companies Hiring', gradient: 'from-purple-500 to-pink-400' },
+        { icon: HiBriefcase, value: data.totalJobs, suffix: '+', label: 'Jobs Posted', gradient: 'from-orange-500 to-amber-400' },
+        { icon: HiTrendingUp, value: data.totalPlacements, suffix: '+', label: 'Successful Placements', gradient: 'from-emerald-500 to-teal-400' },
+    ];
 
     return (
         <section className="py-24 lg:py-32 relative overflow-hidden">
@@ -61,7 +81,7 @@ export default function Statistics() {
                                 <stat.icon className="w-7 h-7 text-white" />
                             </div>
                             <div className="text-3xl sm:text-4xl font-bold text-white mb-2">
-                                {inView ? (
+                                {inView && loaded ? (
                                     <CountUp end={stat.value} duration={2.5} separator="," suffix={stat.suffix} />
                                 ) : (
                                     `0${stat.suffix}`
